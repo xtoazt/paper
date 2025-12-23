@@ -34,8 +34,9 @@ python3 paper-proxy/src/main.py --port 8080
 ### 2. Access Sites
 Once connected (Green dot in UI), you can access:
 
-*   [http://blog.paper](http://blog.paper) (or `blog.paper:8080` if not using sudo)
-*   [http://shop.paper](http://shop.paper) (or `shop.paper:8080` if not using sudo)
+*   [http://blog.paper](http://blog.paper) - A live blog rendered in your browser.
+*   [http://shop.paper](http://shop.paper) - A demo store.
+*   **Import Repos**: Paste a `user/repo` in the dashboard to instantly mount it as `repo.paper`.
 
 ## 🏗️ Architecture
 
@@ -45,6 +46,7 @@ graph TD
     LocalProxy -->|WebSocket| PaperWeb[Paper WebVM (React App)]
     PaperWeb -->|Emulated Response| LocalProxy
     LocalProxy -->|HTML| User
+    PaperWeb -.->|Fetch API| GitHub[GitHub API (for Imports)]
 ```
 
 ## 💻 Development

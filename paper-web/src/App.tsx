@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import './index.css';
 import { Terminal } from './components/Terminal';
-import { apps, defaultHandler, ResponseData } from './lib/registry';
+import { apps, defaultHandler, ResponseData, createRepoApp, registerApp } from './lib/registry';
 
 interface RequestPayload {
   id: string;
@@ -15,6 +15,10 @@ interface RequestPayload {
 function App() {
   const [connected, setConnected] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
+  const [repoUrl, setRepoUrl] = useState('');
+  const [loadingRepo, setLoadingRepo] = useState(false);
+  // Force update to re-render when apps list changes
+  const [, setTick] = useState(0); 
   const ws = useRef<WebSocket | null>(null);
 
   // Auto-connect loop
@@ -78,7 +82,13 @@ function App() {
     let result: ResponseData;
 
     if (app) {
-        result = app.handler(req.path, req.headers);
+        // Handle sync or async
+        const possiblePromise = app.handler(req.path, req.headers);
+        if (possiblePromise instanceof Promise) {
+            result = await possiblePromise;
+        } else {
+            result = possiblePromise;
+        }
     } else {
         result = defaultHandler(domain);
     }
@@ -87,6 +97,26 @@ function App() {
       id: req.id,
       ...result
     };
+  };
+
+  const handleImport = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!repoUrl) return;
+
+      setLoadingRepo(true);
+      log('SYSTEM', `Fetching repo ${repoUrl}...`);
+      try {
+          const app = await createRepoApp(repoUrl);
+          registerApp(app);
+          log('SYSTEM', `Registered new app: ${app.domain}`);
+          setRepoUrl('');
+          setTick(t => t + 1); // Force re-render
+      } catch (err: any) {
+          log('ERROR', `Failed to import repo: ${err.message}`);
+          alert(`Failed to import: ${err.message}`);
+      } finally {
+          setLoadingRepo(false);
+      }
   };
 
   return (
@@ -138,11 +168,23 @@ function App() {
               </div>
             ))}
             
-            <div className="app-card" style={{ borderStyle: 'dashed', opacity: 0.6 }}>
+            <div className="app-card" style={{ borderStyle: 'dashed', opacity: loadingRepo ? 0.5 : 1 }}>
                <div className="app-card-header">
-                  <span className="app-domain">new-project.paper</span>
+                  <span className="app-domain">Import Repository</span>
                </div>
-               <p style={{ margin: 0, color: '#666' }}>Drag & drop repo URL to deploy...</p>
+               <form onSubmit={handleImport} style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                    <input 
+                        type="text" 
+                        placeholder="user/repo" 
+                        value={repoUrl}
+                        onChange={e => setRepoUrl(e.target.value)}
+                        disabled={loadingRepo}
+                        style={{ background: 'transparent', border: '1px solid #333', color: 'white', padding: '0.5rem', flex: 1 }}
+                    />
+                    <button type="submit" disabled={loadingRepo || !repoUrl}>
+                        {loadingRepo ? '...' : '+'}
+                    </button>
+               </form>
             </div>
           </div>
 
