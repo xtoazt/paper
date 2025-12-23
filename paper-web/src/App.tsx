@@ -3,7 +3,7 @@ import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { AppGrid } from './components/ui/AppGrid';
 import { SetupCard } from './components/ui/SetupCard';
-import { apps, defaultHandler, ResponseData, registerApp, createRepoApp } from './lib/registry';
+import { apps } from './lib/registry';
 import { runtime } from './lib/runtime';
 
 interface RequestPayload {
@@ -17,7 +17,6 @@ interface RequestPayload {
 
 function App() {
   const [connected, setConnected] = useState(false);
-  const [, setTick] = useState(0); 
   const ws = useRef<WebSocket | null>(null);
 
   // Auto-connect loop

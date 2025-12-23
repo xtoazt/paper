@@ -1,4 +1,3 @@
-import { GitHubRepo } from './github';
 import { runtime } from './runtime';
 
 export interface VirtualApp {

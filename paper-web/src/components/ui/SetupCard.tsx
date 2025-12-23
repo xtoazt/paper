@@ -1,5 +1,3 @@
-import React from 'react';
-
 export const SetupCard = () => {
     const handleCopy = () => {
         const cmd = "curl -sL http://localhost:5173/scripts/install.sh | bash";

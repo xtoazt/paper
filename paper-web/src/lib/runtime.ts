@@ -116,7 +116,7 @@ export class BrowserPodRuntime {
         };
     }
 
-    private runShopApp(path: string) {
+    private runShopApp(_path: string) {
         const content = `
             <div style="text-align:center; padding: 4rem 0;">
                 <h1 style="font-size:3rem; margin-bottom:0.5rem">Paper Supplies.</h1>
