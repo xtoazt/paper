@@ -29,7 +29,7 @@ jobs:
           cache-dependency-path: 'paper-web/package.json'
 
       - name: Install dependencies
-        run: cd paper-web && npm ci
+        run: cd paper-web && npm install
 
       - name: Build
         run: cd paper-web && npm run build
