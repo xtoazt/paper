@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import './index.css';
 import { Terminal } from './components/Terminal';
 import { CopyInstallBlock } from './components/Bootstrap';
+import { VirtualBrowser } from './components/VirtualBrowser';
 import { apps, defaultHandler, ResponseData, createRepoApp, registerApp } from './lib/registry';
 
 interface RequestPayload {
@@ -18,8 +19,9 @@ function App() {
   const [logs, setLogs] = useState<string[]>([]);
   const [repoUrl, setRepoUrl] = useState('');
   const [loadingRepo, setLoadingRepo] = useState(false);
+  const [virtualDomain, setVirtualDomain] = useState<string | null>(null);
   // Force update to re-render when apps list changes
-  const [, setTick] = useState(0); 
+  const [, setTick] = useState(0);  
   const ws = useRef<WebSocket | null>(null);
 
   // Auto-connect loop
@@ -163,14 +165,22 @@ function App() {
               <div key={app.domain} className="app-card">
                 <div className="app-card-header">
                   <span className="app-domain">{app.domain}</span>
-                  <a 
-                    href={`http://${app.domain}:8080`} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="app-link"
-                  >
-                    Open ↗
-                  </a>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button 
+                        onClick={() => setVirtualDomain(app.domain)}
+                        style={{ border: '1px solid #444', background: 'transparent', fontSize: '0.8rem', padding: '0.2rem 0.5rem' }}
+                    >
+                        Virtual View
+                    </button>
+                    <a 
+                        href={`http://${app.domain}:8080`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="app-link"
+                    >
+                        Direct ↗
+                    </a>
+                  </div>
                 </div>
                 <p style={{ margin: 0, color: '#888' }}>{app.description}</p>
               </div>
@@ -202,6 +212,10 @@ function App() {
           </div>
         </div>
       </main>
+      
+      {virtualDomain && (
+          <VirtualBrowser domain={virtualDomain} onClose={() => setVirtualDomain(null)} />
+      )}
     </>
   );
 }

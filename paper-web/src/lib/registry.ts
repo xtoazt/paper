@@ -120,7 +120,7 @@ export const apps: VirtualApp[] = [
         handler: (path) => {
             let bodyContent = '';
             
-            if (path === '/') {
+            if (path === '/' || path === '/index.html') {
                 bodyContent = `
                     <div class="meta">Latest Stories</div>
                     <article>
@@ -218,23 +218,56 @@ export const createRepoApp = async (repoUrl: string): Promise<VirtualApp> => {
         name: `${repo.owner}/${repo.repo}`,
         description: `Live preview of ${repoUrl}`,
         handler: async (path) => {
+            // Enhanced "Smart Serve" logic
             try {
-                const content = await repo.getFile(path);
+                // 1. Try exact match
+                let content = await repo.getFile(path);
+                let servedPath = path;
+
+                // 2. Try index.html for directories
+                if (content === null) {
+                    if (path === '/' || path.endsWith('/')) {
+                        content = await repo.getFile(path + 'index.html');
+                        servedPath = path + 'index.html';
+                    }
+                }
+                
+                // 3. Try "dist/index.html" or "public/index.html" for root
+                if (content === null && path === '/') {
+                     content = await repo.getFile('/dist/index.html');
+                     if (!content) content = await repo.getFile('/public/index.html');
+                     if (content) servedPath = '/index.html';
+                }
+
                 if (content === null) {
                     return {
                         status: 404,
                         headers: { 'Content-Type': 'text/html' },
-                        body: `<h1>404 Not Found</h1><p>File not found in repo: ${path}</p>`
+                        body: `
+                        <html>
+                            <head><title>404</title><style>body{font-family:sans-serif;padding:2rem}</style></head>
+                            <body>
+                                <h1>404 Not Found</h1>
+                                <p>File not found: <code>${path}</code></p>
+                                <hr>
+                                <p>Repo: ${repo.owner}/${repo.repo}</p>
+                            </body>
+                        </html>`
                     };
                 }
 
-                const ext = path.split('.').pop();
+                const ext = servedPath.split('.').pop();
                 let contentType = 'text/plain';
                 if (ext === 'html') contentType = 'text/html';
                 if (ext === 'js') contentType = 'application/javascript';
                 if (ext === 'css') contentType = 'text/css';
                 if (ext === 'json') contentType = 'application/json';
+                if (ext === 'png') contentType = 'image/png';
+                if (ext === 'svg') contentType = 'image/svg+xml';
 
+                // Basic injection to make relative links work in Virtual Mode if we were rewriting
+                // But for now, we just serve raw.
+                
                 return {
                     status: 200,
                     headers: { 'Content-Type': contentType },
