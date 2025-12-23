@@ -1,4 +1,3 @@
-import React from 'react';
 import { Cloud, Terminal } from 'lucide-react';
 
 const SCRIPT_URL = "https://rohan.github.io/paper/scripts/install.sh"; // Placeholder

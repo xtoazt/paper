@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Clock, ArrowRight, ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
+import { CheckCircle, XCircle } from 'lucide-react';
 
 export interface LogEntry {
     id: string;

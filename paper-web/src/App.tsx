@@ -4,7 +4,7 @@ import { Header } from './components/layout/Header';
 import { AppGrid } from './components/ui/AppGrid';
 import { SetupCard } from './components/ui/SetupCard';
 import { LogsView, LogEntry } from './components/ui/LogsView';
-import { apps, defaultHandler, ResponseData } from './lib/registry';
+import { apps } from './lib/registry';
 import { runtime } from './lib/runtime';
 import { Plus } from 'lucide-react';
 
