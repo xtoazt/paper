@@ -1,43 +1,64 @@
 # Paper
 
-Paper is a minimalist, local-first web development environment that runs entirely in your browser tabs, routed via a local ephemeral ingress.
+**Paper** is a browser-based web server runtime that works offline, routed via a local ephemeral ingress. It allows you to access locally emulated sites (like `blog.paper`) through your standard browser without traditional DNS or heavy local servers.
 
-## Architecture
+![Paper UI](https://via.placeholder.com/800x400?text=Paper+UI+Screenshot)
+
+## 🚀 Deployment
+
+Paper is designed to be hosted on **GitHub Pages**.
+
+### One-Click Deployment
+1. Fork this repository.
+2. Go to **Settings > Pages** in your GitHub repository.
+3. Select **GitHub Actions** as the Source.
+4. Go to **Actions** tab and enable workflows if needed.
+5. Push a commit or manually run the `Deploy Paper WebVM` workflow.
+6. Open your new GitHub Pages URL.
+
+## 🛠️ Local Usage
+
+Once the "Paper Web" (the frontend) is running (either locally or on GitHub Pages), you need to connect the local ingress.
+
+### 1. Start the Ingress
+The ingress is a small Python script that bridges `127.0.0.1` to the WebVM.
+
+```bash
+# Recommended (Automatic /etc/hosts injection)
+sudo python3 paper-proxy/src/main.py --port 80
+
+# Alternative (Manual Config / PAC)
+python3 paper-proxy/src/main.py --port 8080
+```
+
+### 2. Access Sites
+Once connected (Green dot in UI), you can access:
+
+*   [http://blog.paper](http://blog.paper) (or `blog.paper:8080` if not using sudo)
+*   [http://shop.paper](http://shop.paper) (or `shop.paper:8080` if not using sudo)
+
+## 🏗️ Architecture
 
 ```mermaid
 graph TD
-    BrowserTabs["Browser Tabs (https://site.paper)"] -->|TCP| Ingress["Local Ephemeral Ingress (127.0.0.1)"]
-    Ingress -->|IPC/WS| WebVM["WebVM Master (Browser Tab)"]
-    WebVM -->|Clones| GitHubRepos["GitHub Repos"]
+    User[User Browser] -->|http://blog.paper| LocalProxy[Local Ingress (Python)]
+    LocalProxy -->|WebSocket| PaperWeb[Paper WebVM (React App)]
+    PaperWeb -->|Emulated Response| LocalProxy
+    LocalProxy -->|HTML| User
 ```
 
-## Components
+## 💻 Development
 
-### 1. WebVM Master (`paper-web`)
-- **Hosted on:** GitHub Actions (GitHub Pages)
-- **Tech Stack:** TypeScript, React, Vite, WebContainers (conceptually)
-- **Role:** 
-    - Serves the monochrome, minimalist UI.
-    - Manages the lifecycle of the local ingress.
-    - Handles "server-side" logic for the `.paper` sites using in-browser emulation.
+### Frontend (`paper-web`)
+```bash
+cd paper-web
+npm install
+npm run dev
+```
 
-### 2. Local Ingress (`paper-proxy`)
-- **Tech Stack:** Python (Method B)
-- **Role:**
-    - Listens on `127.0.0.1`.
-    - Routes `*.paper` requests to the WebVM via WebSocket.
-    - Minimal footprint, no installation required (just run the script).
-
-## Usage
-
-1. Open `https://paper.dev` (or the GH Pages URL).
-2. The WebVM starts and prompts to run the local proxy.
-3. User runs: `python paper-proxy/main.py`
-4. User accesses `my-project.paper` in a new tab.
-5. Request hits `127.0.0.1` -> Proxy -> WebSocket -> WebVM -> Rendered Response.
-
-## Visual Design
-- Monochrome (Black & White).
-- High contrast.
-- Minimalist typography (Inter/Monospace).
-
+### Backend (`paper-proxy`)
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r paper-proxy/requirements.txt
+```

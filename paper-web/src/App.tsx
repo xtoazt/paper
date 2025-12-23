@@ -1,5 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
-import './index.css'
+import { useState, useEffect, useRef } from 'react';
+import './index.css';
+import { Terminal } from './components/Terminal';
+import { apps, defaultHandler, ResponseData } from './lib/registry';
 
 interface RequestPayload {
   id: string;
@@ -10,187 +12,148 @@ interface RequestPayload {
   body: string;
 }
 
-interface ResponsePayload {
-  id: string;
-  status: number;
-  headers: Record<string, string>;
-  body: string;
-}
-
 function App() {
   const [connected, setConnected] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const ws = useRef<WebSocket | null>(null);
 
+  // Auto-connect loop
   useEffect(() => {
+    let retryTimeout: NodeJS.Timeout;
+
+    const connect = () => {
+      // For GitHub Actions deployment, we need to know where localhost is. 
+      // It's always localhost for the user.
+      const socket = new WebSocket('ws://127.0.0.1:8080/_paper_control');
+
+      socket.onopen = () => {
+        setConnected(true);
+        log('SYSTEM', 'Control Channel Established');
+      };
+
+      socket.onclose = () => {
+        if (connected) log('SYSTEM', 'Control Channel Disconnected');
+        setConnected(false);
+        retryTimeout = setTimeout(connect, 2000);
+      };
+
+      socket.onerror = () => {
+         // Silent fail on error, will retry on close
+      };
+
+      socket.onmessage = async (event) => {
+        try {
+          const data = JSON.parse(event.data) as RequestPayload;
+          const host = data.headers['Host'] || 'unknown';
+          log('PROXY', `${data.method} ${host}${data.path}`);
+          
+          const response = await handleRequest(data);
+          socket.send(JSON.stringify(response));
+        } catch (e) {
+          console.error("Error processing message", e);
+        }
+      };
+
+      ws.current = socket;
+    };
+
     connect();
+
     return () => {
       ws.current?.close();
+      clearTimeout(retryTimeout);
     };
-  }, []);
+  }, []); // Remove dependency on 'connected' to avoid re-triggering loops
 
-  const connect = () => {
-    // In a real scenario, port might be configurable or discovered
-    const socket = new WebSocket('ws://127.0.0.1:8080/_paper_control');
-
-    socket.onopen = () => {
-      setConnected(true);
-      log('Connected to Paper Proxy');
-    };
-
-    socket.onclose = () => {
-      setConnected(false);
-      log('Disconnected from Paper Proxy');
-      // Retry connection
-      setTimeout(connect, 3000);
-    };
-
-    socket.onmessage = async (event) => {
-      try {
-        const data = JSON.parse(event.data) as RequestPayload;
-        log(`Request: ${data.method} ${data.url}`);
-        
-        // Handle Request
-        const response = await handleRequest(data);
-        
-        // Send Response
-        socket.send(JSON.stringify(response));
-      } catch (e) {
-        console.error("Error processing message", e);
-      }
-    };
-
-    ws.current = socket;
+  const log = (source: string, msg: string) => {
+    const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+    setLogs(prev => [`[${time}] [${source}] ${msg}`, ...prev.slice(0, 100)]);
   };
 
-  const log = (msg: string) => {
-    setLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev.slice(0, 50)]);
-  };
-
-  const handleRequest = async (req: RequestPayload): Promise<ResponsePayload> => {
-    // Logic to route based on hostname
-    // req.headers['Host'] -> e.g. blog.paper:8080
+  const handleRequest = async (req: RequestPayload): Promise<ResponseData & { id: string }> => {
     const host = req.headers['Host'] || '';
     const domain = host.split(':')[0]; // remove port
 
-    let body = `
-      <html>
-        <head>
-           <style>body { font-family: sans-serif; padding: 2rem; background: #eee; color: #333; }</style>
-        </head>
-        <body>
-           <h1>Paper</h1>
-           <p>You accessed: <strong>${domain}</strong></p>
-           <p>Path: ${req.path}</p>
-        </body>
-      </html>`;
-    
-    if (domain === 'blog.paper') {
-        body = `
-           <html>
-            <head>
-               <style>body { font-family: serif; padding: 2rem; background: white; color: black; max-width: 600px; margin: 0 auto; }</style>
-            </head>
-            <body>
-               <h1>My Blog</h1>
-               <p>Welcome to the blog hosted on Paper.</p>
-               <hr/>
-               <p>This content is served from the WebVM in your other tab!</p>
-            </body>
-          </html>
-        `;
-    } else if (domain === 'shop.paper') {
-        body = `
-           <html>
-            <head>
-               <style>body { font-family: sans-serif; padding: 2rem; background: #f0f0f0; color: #111; }</style>
-            </head>
-            <body>
-               <h1>My Shop</h1>
-               <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
-                  <div style="background: white; padding: 1rem;">Product A</div>
-                  <div style="background: white; padding: 1rem;">Product B</div>
-                  <div style="background: white; padding: 1rem;">Product C</div>
-               </div>
-            </body>
-          </html>
-        `;
+    const app = apps.find(a => a.domain === domain);
+    let result: ResponseData;
+
+    if (app) {
+        result = app.handler(req.path, req.headers);
+    } else {
+        result = defaultHandler(domain);
     }
 
     return {
       id: req.id,
-      status: 200,
-      headers: {
-        'Content-Type': 'text/html',
-        'Server': 'Paper-WebVM'
-      },
-      body
+      ...result
     };
   };
 
   return (
-    <div>
-      <header style={{display: 'flex', alignItems: 'center', marginBottom: '4rem'}}>
-        <div className={`status-dot ${connected ? 'connected' : 'disconnected'}`}></div>
-        <h1 style={{margin: 0}}>Paper</h1>
+    <>
+      <header>
+        <div className="container header-content">
+          <h1>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="9" y1="3" x2="9" y2="21"></line>
+            </svg>
+            Paper
+          </h1>
+          <div className="status-badge">
+            <div className={`status-dot ${connected ? 'connected' : ''}`}></div>
+            {connected ? 'Ingress Active' : 'Connecting...'}
+          </div>
+        </div>
       </header>
 
-      <div style={{marginBottom: '3rem'}}>
-        <p style={{fontSize: '1.2em', color: '#ccc'}}>
-            Local Ingress: 
-            <span style={{fontFamily: 'monospace', marginLeft: '10px', color: 'white'}}>
-                {connected ? 'Active (127.0.0.1:8080)' : 'Waiting...'}
-            </span>
-        </p>
-        {!connected && (
-            <div style={{border: '1px solid #333', padding: '1.5rem', marginTop: '1rem'}}>
-                <p style={{marginTop: 0}}>To start the ingress, run this in your terminal:</p>
-                <pre>python3 paper-proxy/src/main.py</pre>
-            </div>
-        )}
-      </div>
+      <main className="container">
+        <div className="grid">
+          <div className="left-panel">
+            <h2>Active Runtimes</h2>
+            
+            {!connected && (
+              <div className="setup-guide">
+                <p><strong>Local Ingress Required</strong></p>
+                <p>To bridge <code>*.paper</code> domains to this browser tab, run the helper:</p>
+                <pre>python3 paper-proxy/src/main.py --port 8080</pre>
+                <p><small>Or use <code>sudo</code> for port 80/443 auto-config.</small></p>
+              </div>
+            )}
 
-      <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4rem'}}>
-        <div>
-            <h2>Active Routes</h2>
-            <p style={{color: '#666', marginBottom: '1rem'}}>Access these domains to see Paper in action:</p>
-            <ul style={{listStyle: 'none', padding: 0}}>
-                <li style={{borderBottom: '1px solid #333', padding: '1rem 0', display: 'flex', justifyContent: 'space-between'}}>
-                    <span style={{fontFamily: 'monospace'}}>blog.paper:8080</span> 
-                    <span style={{color: '#666'}}>&rarr; Demo Blog</span>
-                </li>
-                <li style={{borderBottom: '1px solid #333', padding: '1rem 0', display: 'flex', justifyContent: 'space-between'}}>
-                    <span style={{fontFamily: 'monospace'}}>shop.paper:8080</span> 
-                    <span style={{color: '#666'}}>&rarr; Demo Shop</span>
-                </li>
-                 <li style={{borderBottom: '1px solid #333', padding: '1rem 0', display: 'flex', justifyContent: 'space-between'}}>
-                    <span style={{fontFamily: 'monospace'}}>*.paper:8080</span> 
-                    <span style={{color: '#666'}}>&rarr; Default Handler</span>
-                </li>
-            </ul>
-        </div>
-        
-        <div>
-            <h2>Logs</h2>
-            <div style={{
-                fontFamily: 'monospace', 
-                fontSize: '0.9em', 
-                color: '#888', 
-                height: '300px', 
-                overflowY: 'auto',
-                border: '1px solid #222',
-                padding: '1rem'
-            }}>
-                {logs.length === 0 && <span style={{color: '#444'}}>Waiting for requests...</span>}
-                {logs.map((l, i) => (
-                    <div key={i} style={{marginBottom: '0.5rem'}}>{l}</div>
-                ))}
+            {apps.map(app => (
+              <div key={app.domain} className="app-card">
+                <div className="app-card-header">
+                  <span className="app-domain">{app.domain}</span>
+                  <a 
+                    href={`http://${app.domain}:8080`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="app-link"
+                  >
+                    Open ↗
+                  </a>
+                </div>
+                <p style={{ margin: 0, color: '#888' }}>{app.description}</p>
+              </div>
+            ))}
+            
+            <div className="app-card" style={{ borderStyle: 'dashed', opacity: 0.6 }}>
+               <div className="app-card-header">
+                  <span className="app-domain">new-project.paper</span>
+               </div>
+               <p style={{ margin: 0, color: '#666' }}>Drag & drop repo URL to deploy...</p>
             </div>
+          </div>
+
+          <div className="right-panel">
+            <h2>System Logs</h2>
+            <Terminal logs={logs} />
+          </div>
         </div>
-      </div>
-    </div>
-  )
+      </main>
+    </>
+  );
 }
 
-export default App
-
+export default App;
