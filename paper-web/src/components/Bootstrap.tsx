@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 const SCRIPT_CONTENT = `
 import sys, os, socket, json, struct, threading, subprocess, time, platform

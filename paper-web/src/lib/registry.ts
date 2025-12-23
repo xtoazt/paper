@@ -156,6 +156,7 @@ export const apps: VirtualApp[] = [
         name: 'Paper Store',
         description: 'An Apple-style e-commerce prototype.',
         handler: (path) => {
+            const _p = path; // Unused
              const content = `
                 <div class="hero">
                     <h1>Paper Supplies.</h1>
