@@ -19,7 +19,7 @@ function App() {
 
   // Auto-connect loop
   useEffect(() => {
-    let retryTimeout: NodeJS.Timeout;
+    let retryTimeout: ReturnType<typeof setTimeout>;
 
     const connect = () => {
       // For GitHub Actions deployment, we need to know where localhost is. 
