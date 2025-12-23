@@ -13,12 +13,22 @@ class HostsManager:
     HOSTS_FILE = "/etc/hosts" if os.name != 'nt' else r"C:\Windows\System32\drivers\etc\hosts"
 
     def __init__(self, domains=None):
-        self.domains = domains or ["paper", "blog.paper", "shop.paper", "test.paper"]
+        # We start with a base set, but allow dynamic additions
+        self.domains = set(domains or ["paper", "blog.paper", "shop.paper", "test.paper"])
         self.installed = False
+
+    def add_domain(self, domain):
+        if domain in self.domains:
+            return False
+        self.domains.add(domain)
+        # Re-install with new list
+        self.install()
+        return True
 
     def _generate_block(self):
         lines = [self.PAPER_MARKER_START]
-        for domain in self.domains:
+        # Sort for stability
+        for domain in sorted(list(self.domains)):
             lines.append(f"127.0.0.1 {domain}")
         lines.append(self.PAPER_MARKER_END)
         return "\n".join(lines) + "\n"
@@ -27,42 +37,58 @@ class HostsManager:
         system = platform.system()
         try:
             if system == 'Darwin':
-                # macOS
                 subprocess.run(['killall', '-HUP', 'mDNSResponder'], check=False)
-                logger.info("♻️  Flushed macOS DNS Cache")
             elif system == 'Linux':
-                # Ubuntu/Debian often use systemd-resolve
                 subprocess.run(['resolvectl', 'flush-caches'], check=False)
-                # Or nscd
-                subprocess.run(['/etc/init.d/nscd', 'restart'], check=False)
             elif system == 'Windows':
                 subprocess.run(['ipconfig', '/flushdns'], check=False)
         except Exception as e:
-            logger.debug(f"DNS flush failed (might be normal): {e}")
+            logger.debug(f"DNS flush failed: {e}")
 
     def install(self):
         try:
+            # Read current content
             with open(self.HOSTS_FILE, 'r') as f:
                 content = f.read()
 
-            if self.PAPER_MARKER_START in content:
-                self.remove(silent=True)
-                with open(self.HOSTS_FILE, 'r') as f:
-                    content = f.read()
+            # If we already have a block, we need to replace it carefully
+            # But simpler: Remove old block in memory, then append new block
+            
+            lines = content.splitlines(keepends=True)
+            new_lines = []
+            skip = False
+            
+            # Remove existing Paper block
+            for line in lines:
+                if self.PAPER_MARKER_START in line:
+                    skip = True
+                    continue
+                if self.PAPER_MARKER_END in line:
+                    skip = False
+                    continue
+                if not skip:
+                    new_lines.append(line)
 
+            # Generate new block
             block = self._generate_block()
             
-            with open(self.HOSTS_FILE, 'a') as f:
+            # Write back everything
+            with open(self.HOSTS_FILE, 'w') as f:
+                f.writelines(new_lines)
+                if not new_lines[-1].endswith('\n'):
+                    f.write('\n')
                 f.write(block)
             
             self.installed = True
-            logger.info(f"✅ Injected {len(self.domains)} domains into {self.HOSTS_FILE}")
-            
             self.flush_dns()
-            atexit.register(self.remove)
+            
+            # Ensure we clean up on exit (only register once)
+            if not hasattr(self, '_registered'):
+                atexit.register(self.remove)
+                self._registered = True
             
         except PermissionError:
-            logger.warning("⚠️  Could not write to hosts file (Permission Denied). Run with sudo for automatic domain resolution.")
+            logger.warning("⚠️  Permission Denied: Cannot update hosts file for new domain.")
         except Exception as e:
             logger.error(f"❌ Failed to update hosts file: {e}")
 
@@ -91,16 +117,9 @@ class HostsManager:
             if found:
                 with open(self.HOSTS_FILE, 'w') as f:
                     f.writelines(new_lines)
-                if not silent:
-                    logger.info("🧹 Cleaned up hosts file")
+                self.flush_dns()
                     
             self.installed = False
-            if found:
-                self.flush_dns()
 
-        except PermissionError:
-            if not silent:
-                logger.error("❌ Failed to clean up hosts file (Permission Denied)")
-        except Exception as e:
-            if not silent:
-                logger.error(f"❌ Failed to clean hosts file: {e}")
+        except Exception:
+            pass

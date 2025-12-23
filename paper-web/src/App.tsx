@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import './index.css';
 import { Terminal } from './components/Terminal';
+import { CopyInstallBlock } from './components/Bootstrap';
 import { apps, defaultHandler, ResponseData, createRepoApp, registerApp } from './lib/registry';
 
 interface RequestPayload {
@@ -109,8 +110,18 @@ function App() {
           const app = await createRepoApp(repoUrl);
           registerApp(app);
           log('SYSTEM', `Registered new app: ${app.domain}`);
+          
+          // Send registration command to Proxy
+          if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+             ws.current.send(JSON.stringify({
+                 type: 'register_domain',
+                 domain: app.domain
+             }));
+             log('SYSTEM', `Requested DNS registration for ${app.domain}`);
+          }
+          
           setRepoUrl('');
-          setTick(t => t + 1); // Force re-render
+          setTick(t => t + 1);
       } catch (err: any) {
           log('ERROR', `Failed to import repo: ${err.message}`);
           alert(`Failed to import: ${err.message}`);
@@ -144,10 +155,7 @@ function App() {
             
             {!connected && (
               <div className="setup-guide">
-                <p><strong>Local Ingress Required</strong></p>
-                <p>To bridge <code>*.paper</code> domains to this browser tab, run the helper:</p>
-                <pre>python3 paper-proxy/src/main.py --port 8080</pre>
-                <p><small>Or use <code>sudo</code> for port 80/443 auto-config.</small></p>
+                <CopyInstallBlock />
               </div>
             )}
 

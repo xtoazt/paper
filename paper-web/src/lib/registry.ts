@@ -13,224 +13,194 @@ export interface ResponseData {
     body: string;
 }
 
-const commonStyles = `
+// ----------------------------------------------------------------------
+// TEMPLATES
+// ----------------------------------------------------------------------
+
+const BLOG_TEMPLATE = (content: string) => `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paper Blog</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Merriweather:ital,wght@0,300;0,700;1,300&display=swap');
+        :root { --bg: #fff; --text: #111; --accent: #3291ff; --sub: #666; --border: #eaeaea; }
+        @media (prefers-color-scheme: dark) { :root { --bg: #000; --text: #fff; --sub: #888; --border: #333; } }
         
-        :root { 
-            --bg: #ffffff; 
-            --fg: #1a1a1a; 
-            --accent: #2c2c2c;
-            --muted: #666;
-            --border: #eaeaea;
-        }
-        @media (prefers-color-scheme: dark) { 
-            :root { 
-                --bg: #111111; 
-                --fg: #eeeeee; 
-                --accent: #888; 
-                --muted: #999;
-                --border: #333;
-            } 
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+               background: var(--bg); color: var(--text); margin: 0; line-height: 1.6; }
         
-        body { 
-            font-family: 'Inter', sans-serif;
-            background: var(--bg); 
-            color: var(--fg); 
-            padding: 0; 
-            margin: 0;
-            line-height: 1.6; 
-        }
-
-        .container {
-            max-width: 720px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        header {
-            padding: 4rem 0 2rem;
-            border-bottom: 1px solid var(--border);
-            margin-bottom: 3rem;
-        }
-
-        h1 { 
-            font-family: 'Merriweather', serif;
-            font-size: 2.5rem;
-            font-weight: 700; 
-            letter-spacing: -0.03em;
-            margin: 0 0 1rem 0;
-        }
-
-        .meta {
-            color: var(--muted);
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            font-weight: 600;
-        }
-
-        article {
-            margin-bottom: 4rem;
-        }
-
-        article h2 {
-            font-family: 'Merriweather', serif;
-            font-size: 1.8rem;
-            margin-bottom: 0.5rem;
-        }
-
-        article p {
-            font-size: 1.1rem;
-            color: var(--fg);
-            opacity: 0.9;
-            margin-bottom: 1.5rem;
-        }
-
-        a { 
-            color: var(--fg); 
-            text-decoration: underline; 
-            text-decoration-color: var(--accent); 
-            text-underline-offset: 3px;
-        }
+        nav { border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; }
+        nav a { color: var(--text); text-decoration: none; font-weight: 500; font-size: 0.9rem; }
+        nav .brand { font-weight: 700; letter-spacing: -0.5px; font-size: 1.1rem; }
         
-        .nav { 
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            padding: 1rem;
-            background: var(--bg);
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            z-index: 100;
-        }
+        main { max-width: 680px; margin: 4rem auto; padding: 0 1.5rem; }
         
-        .nav-logo {
-            font-weight: 700;
-            text-decoration: none;
-        }
-
-        code { 
-            background: var(--border); 
-            color: var(--fg); 
-            padding: 0.2rem 0.4rem; 
-            border-radius: 3px; 
-            font-family: 'SF Mono', monospace;
-            font-size: 0.9em;
-        }
+        h1 { font-size: 2.5rem; letter-spacing: -1px; margin-bottom: 0.5rem; }
+        .meta { color: var(--sub); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2rem; }
+        
+        article { margin-bottom: 4rem; }
+        article h2 { margin: 0 0 0.5rem 0; font-size: 1.5rem; }
+        article h2 a { color: var(--text); text-decoration: none; }
+        article h2 a:hover { text-decoration: underline; }
+        article p { color: var(--sub); font-size: 1.1rem; margin-top: 0.5rem; }
+        
+        footer { border-top: 1px solid var(--border); padding: 2rem; text-align: center; color: var(--sub); font-size: 0.8rem; margin-top: 4rem; }
     </style>
+</head>
+<body>
+    <nav>
+        <span class="brand">blog.paper</span>
+        <div><a href="/">Home</a><span style="margin:0 1rem;color:var(--border)">|</span><a href="https://github.com/rohan/paper">Source</a></div>
+    </nav>
+    <main>
+        ${content}
+    </main>
+    <footer>
+        Served from memory by Paper WebVM
+    </footer>
+</body>
+</html>
 `;
 
-// Mutable app registry
+const SHOP_TEMPLATE = (content: string) => `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paper Store</title>
+    <style>
+        :root { --bg: #f5f5f7; --card: #fff; --text: #1d1d1f; --btn: #0071e3; --btn-text: #fff; }
+        @media (prefers-color-scheme: dark) { :root { --bg: #000; --card: #1c1c1e; --text: #f5f5f7; } }
+        
+        body { font-family: "SF Pro Text", -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; }
+        
+        header { background: rgba(255,255,255,0.8); backdrop-filter: saturate(180%) blur(20px); position: sticky; top: 0; padding: 1rem 0; z-index: 10; border-bottom: 1px solid rgba(0,0,0,0.1); }
+        @media (prefers-color-scheme: dark) { header { background: rgba(0,0,0,0.8); border-bottom: 1px solid rgba(255,255,255,0.1); } }
+        
+        .container { max-width: 980px; margin: 0 auto; padding: 0 1.5rem; }
+        .hero { text-align: center; padding: 4rem 0; }
+        .hero h1 { font-size: 3rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .hero p { font-size: 1.5rem; color: #86868b; font-weight: 400; }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2rem; padding: 2rem 0; }
+        
+        .product { background: var(--card); border-radius: 18px; padding: 2rem; text-align: center; transition: transform 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .product:hover { transform: scale(1.02); }
+        .product h3 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+        .product .price { font-size: 1.1rem; color: #86868b; margin-bottom: 1.5rem; }
+        
+        button { background: var(--btn); color: var(--btn-text); border: none; padding: 0.8rem 1.5rem; border-radius: 99px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+        button:hover { opacity: 0.9; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container" style="display:flex; justify-content:space-between; align-items:center;">
+            <b>Store.paper</b>
+            <span>🛒 0</span>
+        </div>
+    </header>
+    ${content}
+</body>
+</html>
+`;
+
+// ----------------------------------------------------------------------
+// APPS
+// ----------------------------------------------------------------------
+
 export const apps: VirtualApp[] = [
     {
         domain: 'blog.paper',
         name: 'Dev Blog',
-        description: 'A minimal markdown-ish blog engine running in WebVM.',
+        description: 'A minimal markdown-ish blog engine.',
         handler: (path) => {
-            const content = path === '/' ? `
-                <article>
-                    <div class="meta">December 23, 2025</div>
-                    <h2><a href="/post/1" style="text-decoration: none">Why Local-First Software is the Future</a></h2>
-                    <p>We've spent the last decade moving everything to the cloud. It's time to bring it back home. Latency is zero when the server is 127.0.0.1.</p>
-                </article>
-                <article>
-                    <div class="meta">December 22, 2025</div>
-                    <h2><a href="/post/2" style="text-decoration: none">The Magic of Loopback Interfaces</a></h2>
-                    <p>How we abuse localhost for fun and profit. You don't always need a VPS to host a website, sometimes you just need a clever proxy.</p>
-                </article>
-                <article>
-                    <div class="meta">December 20, 2025</div>
-                    <h2><a href="/post/3" style="text-decoration: none">Building Paper: A Post-Mortem</a></h2>
-                    <p>Lessons learned from emulating a cloud environment entirely within a browser tab.</p>
-                </article>
-            ` : `
-                <div class="meta">Article View</div>
-                <h1>${path.replace('/post/', 'Post #')}</h1>
-                <p>You are viewing a dynamically generated post at <code>${path}</code>.</p>
-                <p>This content is served directly from the WebVM's memory. No database, no API calls, just pure JavaScript string manipulation.</p>
-                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
-                <br>
-                <a href="/">← Back to Home</a>
-            `;
+            let bodyContent = '';
+            
+            if (path === '/') {
+                bodyContent = `
+                    <div class="meta">Latest Stories</div>
+                    <article>
+                        <h2><a href="/post/1">Why Local-First is the Future</a></h2>
+                        <p>We've spent the last decade moving everything to the cloud. It's time to bring it back home.</p>
+                    </article>
+                    <article>
+                        <h2><a href="/post/2">The Magic of Loopback Interfaces</a></h2>
+                        <p>How we abuse localhost for fun and profit. You don't always need a VPS.</p>
+                    </article>
+                `;
+            } else if (path.startsWith('/post/')) {
+                bodyContent = `
+                     <a href="/" style="display:inline-block; margin-bottom:2rem; color:var(--accent); text-decoration:none">← Back to Home</a>
+                     <div class="meta">Blog Post</div>
+                     <h1>${path.replace('/post/', 'Story #')}</h1>
+                     <p>This content is generated dynamically by the WebVM running in your browser tab.</p>
+                     <p>It demonstrates that we can serve rich HTML content without a backend server.</p>
+                `;
+            } else {
+                 return defaultHandler(path);
+            }
 
             return {
                 status: 200,
                 headers: { 'Content-Type': 'text/html' },
-                body: `
-                <!DOCTYPE html>
-                <html>
-                    <head>
-                        <title>Paper Blog</title>
-                        <meta charset="utf-8">
-                        <meta name="viewport" content="width=device-width, initial-scale=1">
-                        ${commonStyles}
-                    </head>
-                    <body>
-                        <nav class="nav">
-                            <a href="/" class="nav-logo">blog.paper</a>
-                            <div>
-                                <a href="/about" style="margin-left: 1rem">About</a>
-                                <a href="https://paper.dev" style="margin-left: 1rem">Paper</a>
-                            </div>
-                        </nav>
-                        <div class="container">
-                            <header>
-                                <h1>The Paper Blog</h1>
-                                <p>Thoughts on local-first web development.</p>
-                            </header>
-                            ${content}
-                        </div>
-                    </body>
-                </html>`
+                body: BLOG_TEMPLATE(bodyContent)
             };
         }
     },
     {
         domain: 'shop.paper',
         name: 'Paper Store',
-        description: 'An e-commerce prototype showcasing dynamic routing.',
+        description: 'An Apple-style e-commerce prototype.',
         handler: (path) => {
-            return {
+             const content = `
+                <div class="hero">
+                    <h1>Paper Supplies.</h1>
+                    <p>Pro-grade materials for your next idea.</p>
+                </div>
+                <div class="container">
+                    <div class="grid">
+                        <div class="product">
+                            <h3>Graph Paper</h3>
+                            <div class="price">$5.00 / pad</div>
+                            <button onclick="alert('Added to cart')">Buy</button>
+                        </div>
+                        <div class="product">
+                            <h3>Dot Grid</h3>
+                            <div class="price">$6.50 / pad</div>
+                            <button onclick="alert('Added to cart')">Buy</button>
+                        </div>
+                        <div class="product">
+                            <h3>Plain White</h3>
+                            <div class="price">$4.00 / pad</div>
+                            <button onclick="alert('Added to cart')">Buy</button>
+                        </div>
+                         <div class="product">
+                            <h3>Blueprint</h3>
+                            <div class="price">$12.00 / roll</div>
+                            <button onclick="alert('Added to cart')">Buy</button>
+                        </div>
+                    </div>
+                </div>
+             `;
+             
+             return {
                 status: 200,
                 headers: { 'Content-Type': 'text/html' },
-                body: `
-                <html>
-                    <head><title>Shop</title>${commonStyles}</head>
-                    <body>
-                        <div class="container" style="padding-top: 4rem">
-                            <h1>Paper Supply Co.</h1>
-                            <p>Currently browsing: <b>${path}</b></p>
-                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-top: 2rem;">
-                                <div style="border: 1px solid var(--border); padding: 1.5rem; border-radius: 4px;">
-                                    <h3>Graph Paper</h3>
-                                    <p>$5.00</p>
-                                    <button onclick="alert('Added to cart (in memory)')" style="width:100%; padding: 0.5rem; background: var(--fg); color: var(--bg); border: none; cursor: pointer;">Add to Cart</button>
-                                </div>
-                                <div style="border: 1px solid var(--border); padding: 1.5rem; border-radius: 4px;">
-                                    <h3>Dot Grid</h3>
-                                    <p>$6.50</p>
-                                    <button onclick="alert('Added to cart (in memory)')" style="width:100%; padding: 0.5rem; background: var(--fg); color: var(--bg); border: none; cursor: pointer;">Add to Cart</button>
-                                </div>
-                                <div style="border: 1px solid var(--border); padding: 1.5rem; border-radius: 4px;">
-                                    <h3>Plain White</h3>
-                                    <p>$4.00</p>
-                                    <button onclick="alert('Added to cart (in memory)')" style="width:100%; padding: 0.5rem; background: var(--fg); color: var(--bg); border: none; cursor: pointer;">Add to Cart</button>
-                                </div>
-                            </div>
-                        </div>
-                    </body>
-                </html>`
+                body: SHOP_TEMPLATE(content)
             };
         }
     }
 ];
 
+// ----------------------------------------------------------------------
+// HELPERS
+// ----------------------------------------------------------------------
+
 export const registerApp = (app: VirtualApp) => {
-    // Remove existing if any
     const idx = apps.findIndex(a => a.domain === app.domain);
     if (idx !== -1) apps.splice(idx, 1);
     apps.push(app);
@@ -258,7 +228,6 @@ export const createRepoApp = async (repoUrl: string): Promise<VirtualApp> => {
                     };
                 }
 
-                // Naive content type detection
                 const ext = path.split('.').pop();
                 let contentType = 'text/plain';
                 if (ext === 'html') contentType = 'text/html';
@@ -286,16 +255,6 @@ export const defaultHandler = (host: string): ResponseData => {
     return {
         status: 404,
         headers: { 'Content-Type': 'text/html' },
-        body: `
-        <html>
-            <head><title>404 Not Found</title>${commonStyles}</head>
-            <body>
-                <div class="container" style="padding-top: 4rem">
-                    <h1>404 - Unknown Domain</h1>
-                    <p>The domain <code>${host}</code> is not mapped to any active WebVM application.</p>
-                    <p>Check the <a href="https://paper.dev">Paper Dashboard</a> to see active apps.</p>
-                </div>
-            </body>
-        </html>`
+        body: `<h1>404 Not Found</h1><p>Domain ${host} not found.</p>`
     };
 };
