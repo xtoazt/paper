@@ -2,6 +2,8 @@ import os
 import sys
 import atexit
 import logging
+import platform
+import subprocess
 
 logger = logging.getLogger(__name__)
 
@@ -18,10 +20,25 @@ class HostsManager:
         lines = [self.PAPER_MARKER_START]
         for domain in self.domains:
             lines.append(f"127.0.0.1 {domain}")
-        # Wildcard support in hosts is not standard, so we list common ones.
-        # For true wildcard, we rely on PAC or dnsmasq, but we list defaults here.
         lines.append(self.PAPER_MARKER_END)
         return "\n".join(lines) + "\n"
+
+    def flush_dns(self):
+        system = platform.system()
+        try:
+            if system == 'Darwin':
+                # macOS
+                subprocess.run(['killall', '-HUP', 'mDNSResponder'], check=False)
+                logger.info("♻️  Flushed macOS DNS Cache")
+            elif system == 'Linux':
+                # Ubuntu/Debian often use systemd-resolve
+                subprocess.run(['resolvectl', 'flush-caches'], check=False)
+                # Or nscd
+                subprocess.run(['/etc/init.d/nscd', 'restart'], check=False)
+            elif system == 'Windows':
+                subprocess.run(['ipconfig', '/flushdns'], check=False)
+        except Exception as e:
+            logger.debug(f"DNS flush failed (might be normal): {e}")
 
     def install(self):
         try:
@@ -29,19 +46,19 @@ class HostsManager:
                 content = f.read()
 
             if self.PAPER_MARKER_START in content:
-                # Already installed, maybe stale. Remove first.
                 self.remove(silent=True)
                 with open(self.HOSTS_FILE, 'r') as f:
                     content = f.read()
 
             block = self._generate_block()
             
-            # Need sudo usually
             with open(self.HOSTS_FILE, 'a') as f:
                 f.write(block)
             
             self.installed = True
             logger.info(f"✅ Injected {len(self.domains)} domains into {self.HOSTS_FILE}")
+            
+            self.flush_dns()
             atexit.register(self.remove)
             
         except PermissionError:
@@ -51,8 +68,7 @@ class HostsManager:
 
     def remove(self, silent=False):
         if not self.installed and silent:
-            # Just try to clean up traces
-            pass
+            return
             
         try:
             with open(self.HOSTS_FILE, 'r') as f:
@@ -79,6 +95,8 @@ class HostsManager:
                     logger.info("🧹 Cleaned up hosts file")
                     
             self.installed = False
+            if found:
+                self.flush_dns()
 
         except PermissionError:
             if not silent:
@@ -86,4 +104,3 @@ class HostsManager:
         except Exception as e:
             if not silent:
                 logger.error(f"❌ Failed to clean hosts file: {e}")
-
