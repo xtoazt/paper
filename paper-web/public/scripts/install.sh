@@ -2,22 +2,26 @@
 set -e
 
 # Paper Background Daemon Installer
-# This script sets up the local ingress proxy as a user service.
+# Installs a system-level daemon to handle *.paper domains
 
 PAPER_HOME="$HOME/.paper"
-PROXY_URL="https://raw.githubusercontent.com/rohan/paper/main/paper-proxy/src/main.py" 
-# ^ In a real deployment, this would point to the bundled python script or download it
-# For this dev environment, we assume we are running from the project root or downloading self-contained.
 
 echo "📄 Installing Paper Daemon..."
 
+# Check for sudo/root
+if [ "$EUID" -ne 0 ]; then 
+  echo "⚠️  Please run as root (sudo) to enable domain mapping."
+  exit 1
+fi
+
 # 1. Create hidden directory
 mkdir -p "$PAPER_HOME"
+# Ensure the user owns it even if created by sudo
+chown -R $SUDO_USER "$PAPER_HOME"
 
-# 2. Extract embedded python script (Bootstrap version)
-# We embed the script directly here to avoid fetching issues during dev
+# 2. Extract embedded python script
 cat << 'EOF' > "$PAPER_HOME/paper_daemon.py"
-import sys, os, socket, json, struct, threading, subprocess, platform, time
+import sys, os, socket, threading, subprocess, platform, time, signal
 
 PORT = 8080
 CONTROL_PATH = '/_paper_control'
@@ -37,34 +41,32 @@ def patch_hosts():
         
         if platform.system() == 'Darwin':
             subprocess.run(['killall', '-HUP', 'mDNSResponder'], stderr=subprocess.DEVNULL)
-    except:
-        pass # Best effort without sudo
+    except Exception as e:
+        print(f"Failed to patch hosts: {e}")
 
 class Proxy:
     def __init__(self):
-        self.clients = {}
         self.control_ws = None
         self.lock = threading.Lock()
+        self.running = True
 
     def start(self):
-        # Retry loop for binding
-        while True:
+        patch_hosts()
+        
+        while self.running:
             try:
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 s.bind(('127.0.0.1', PORT))
                 s.listen(50)
-                break
-            except:
+                print(f"Listening on {PORT}")
+                
+                while self.running:
+                    c, a = s.accept()
+                    threading.Thread(target=self.handle, args=(c,)).start()
+            except Exception as e:
+                print(f"Socket error: {e}")
                 time.sleep(5)
-
-        patch_hosts()
-        
-        while True:
-            try:
-                c, a = s.accept()
-                threading.Thread(target=self.handle, args=(c,)).start()
-            except: pass
 
     def handle(self, c):
         try:
@@ -98,7 +100,6 @@ class Proxy:
         
         with self.lock: self.control_ws = c
         
-        # Keep alive
         try:
             while True:
                 if not c.recv(1): break
@@ -113,10 +114,9 @@ class Proxy:
                 c.close()
                 return
             
-            # In a full implementation, we would frame this into the WS
-            # For this 'dumb' daemon, we just reply 200 OK to keep the connection alive
-            # REAL implementation needs bidirectional WS framing here.
-            pass
+            # Keep-alive response for now, real proxying would go here
+            c.sendall(b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nRequest Received")
+            c.close()
 
 if __name__ == '__main__':
     Proxy().start()
@@ -125,8 +125,7 @@ EOF
 # 3. Detect OS and Install Service
 OS="$(uname -s)"
 if [ "$OS" == "Darwin" ]; then
-    # macOS LaunchAgent
-    PLIST="$HOME/Library/LaunchAgents/dev.paper.daemon.plist"
+    PLIST="/Library/LaunchDaemons/dev.paper.daemon.plist"
     cat << EOF > "$PLIST"
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -144,21 +143,19 @@ if [ "$OS" == "Darwin" ]; then
     <key>KeepAlive</key>
     <true/>
     <key>StandardErrorPath</key>
-    <string>$PAPER_HOME/error.log</string>
+    <string>/tmp/paper.err</string>
     <key>StandardOutPath</key>
-    <string>$PAPER_HOME/out.log</string>
+    <string>/tmp/paper.out</string>
 </dict>
 </plist>
 EOF
     
     launchctl unload "$PLIST" 2>/dev/null || true
     launchctl load "$PLIST"
-    echo "✅ Paper Daemon installed on macOS."
+    echo "✅ Paper Daemon installed on macOS (System Level)."
 
 elif [ "$OS" == "Linux" ]; then
-    # Linux Systemd (User)
-    mkdir -p "$HOME/.config/systemd/user"
-    SERVICE="$HOME/.config/systemd/user/paper-daemon.service"
+    SERVICE="/etc/systemd/system/paper-daemon.service"
     cat << EOF > "$SERVICE"
 [Unit]
 Description=Paper Local Ingress
@@ -168,14 +165,13 @@ ExecStart=/usr/bin/python3 $PAPER_HOME/paper_daemon.py
 Restart=always
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target
 EOF
     
-    systemctl --user daemon-reload
-    systemctl --user enable paper-daemon
-    systemctl --user restart paper-daemon
-    echo "✅ Paper Daemon installed on Linux."
+    systemctl daemon-reload
+    systemctl enable paper-daemon
+    systemctl restart paper-daemon
+    echo "✅ Paper Daemon installed on Linux (System Level)."
 fi
 
 echo "🚀 Ready! Refresh your Paper Dashboard."
-

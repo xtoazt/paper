@@ -34,15 +34,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
                     active={currentView === 'overview'} 
                     onClick={() => onNavigate('overview')}
                 />
-                <NavItem icon={<Box size={18} />} label="Deployments" />
-                <NavItem icon={<Globe size={18} />} label="Domains" />
-                <NavItem icon={<Settings size={18} />} label="Settings" />
 
-                <div className="text-xs text-secondary" style={{ marginTop: '2rem', marginBottom: '0.5rem', paddingLeft: '0.5rem' }}>CONNECTIVITY</div>
-                <NavItem icon={<Activity size={18} />} label="Ingress" />
+                <div className="text-xs text-secondary" style={{ marginTop: '2rem', marginBottom: '0.5rem', paddingLeft: '0.5rem' }}>SYSTEM</div>
+                <NavItem 
+                    icon={<Activity size={18} />} 
+                    label="Connection" 
+                    active={currentView === 'connect'}
+                    onClick={() => onNavigate('connect')}
+                />
                 <NavItem 
                     icon={<FileText size={18} />} 
-                    label="Logs" 
+                    label="Traffic Logs" 
                     active={currentView === 'logs'}
                     onClick={() => onNavigate('logs')}
                 />
