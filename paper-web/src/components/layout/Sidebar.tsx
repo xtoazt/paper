@@ -1,4 +1,11 @@
-export const Sidebar = () => {
+import { Home, Box, Globe, Settings, Activity, FileText } from 'lucide-react';
+
+interface SidebarProps {
+    currentView: string;
+    onNavigate: (view: string) => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => {
     return (
         <aside style={{
             width: 'var(--sidebar-width)',
@@ -21,14 +28,24 @@ export const Sidebar = () => {
             {/* Nav */}
             <nav style={{ flex: 1, padding: '0 1rem' }}>
                 <div className="text-xs text-secondary" style={{ marginBottom: '0.5rem', paddingLeft: '0.5rem' }}>PLATFORM</div>
-                <NavItem icon="⚡" label="Overview" active />
-                <NavItem icon="📦" label="Deployments" />
-                <NavItem icon="🌐" label="Domains" />
-                <NavItem icon="⚙️" label="Settings" />
+                <NavItem 
+                    icon={<Home size={18} />} 
+                    label="Overview" 
+                    active={currentView === 'overview'} 
+                    onClick={() => onNavigate('overview')}
+                />
+                <NavItem icon={<Box size={18} />} label="Deployments" />
+                <NavItem icon={<Globe size={18} />} label="Domains" />
+                <NavItem icon={<Settings size={18} />} label="Settings" />
 
                 <div className="text-xs text-secondary" style={{ marginTop: '2rem', marginBottom: '0.5rem', paddingLeft: '0.5rem' }}>CONNECTIVITY</div>
-                <NavItem icon="🔌" label="Ingress" />
-                <NavItem icon="📝" label="Logs" />
+                <NavItem icon={<Activity size={18} />} label="Ingress" />
+                <NavItem 
+                    icon={<FileText size={18} />} 
+                    label="Logs" 
+                    active={currentView === 'logs'}
+                    onClick={() => onNavigate('logs')}
+                />
             </nav>
 
             {/* User Profile */}
@@ -42,8 +59,10 @@ export const Sidebar = () => {
     );
 };
 
-const NavItem = ({ icon, label, active = false }: { icon: string, label: string, active?: boolean }) => (
-    <div style={{
+const NavItem = ({ icon, label, active = false, onClick }: { icon: React.ReactNode, label: string, active?: boolean, onClick?: () => void }) => (
+    <div 
+        onClick={onClick}
+        style={{
         padding: '0.5rem 0.75rem',
         borderRadius: '6px',
         background: active ? 'var(--bg-surface-hover)' : 'transparent',
@@ -56,8 +75,7 @@ const NavItem = ({ icon, label, active = false }: { icon: string, label: string,
         fontSize: '0.9rem',
         fontWeight: 500
     }}>
-        <span>{icon}</span>
+        <span style={{ display: 'flex', alignItems: 'center' }}>{icon}</span>
         <span>{label}</span>
     </div>
 );
-

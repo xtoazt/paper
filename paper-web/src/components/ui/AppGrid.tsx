@@ -1,12 +1,13 @@
 import React from 'react';
 import { VirtualApp } from '../../lib/registry';
+import { ExternalLink, Layers, Plus } from 'lucide-react';
 
 interface AppGridProps {
     apps: VirtualApp[];
     onOpen: (domain: string) => void;
 }
 
-export const AppGrid: React.FC<AppGridProps> = ({ apps, onOpen }) => {
+export const AppGrid: React.FC<AppGridProps> = ({ apps }) => {
     return (
         <div style={{ 
             display: 'grid', 
@@ -15,42 +16,43 @@ export const AppGrid: React.FC<AppGridProps> = ({ apps, onOpen }) => {
             marginTop: '2rem' 
         }}>
             {apps.map(app => (
-                <div key={app.domain} 
-                    onClick={() => onOpen(app.domain)}
-                    style={{
+                <div key={app.domain} style={{
                     background: 'var(--bg-surface)',
                     border: '1px solid var(--border)',
                     borderRadius: '8px',
                     padding: '1.5rem',
                     transition: 'all 0.2s',
-                    cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '1rem'
                 }}>
                     <div className="flex justify-between items-center">
-                        <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{app.name}</div>
+                        <div style={{ fontWeight: 600, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Layers size={20} color="#666" />
+                            {app.name}
+                        </div>
                         <div style={{ 
-                            width: '10px', height: '10px', borderRadius: '50%', 
+                            width: '8px', height: '8px', borderRadius: '50%', 
                             background: '#0070f3', boxShadow: '0 0 10px rgba(0,112,243,0.5)' 
                         }}></div>
                     </div>
                     
-                    <p className="text-sm text-secondary" style={{ margin: 0, flex: 1 }}>
+                    <p className="text-sm text-secondary" style={{ margin: 0, flex: 1, lineHeight: '1.5' }}>
                         {app.description}
                     </p>
 
-                    <div style={{ 
-                        background: '#111', padding: '0.5rem', borderRadius: '4px',
-                        fontSize: '0.8rem', fontFamily: 'monospace', color: '#888',
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-                    }}>
-                        <span>{app.domain}</span>
-                        <span style={{ color: '#fff' }}>Open ↗</span>
-                    </div>
+                    <a 
+                        href={`http://${app.domain}:8080`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="btn"
+                        style={{ justifyContent: 'center', textDecoration: 'none' }}
+                    >
+                        <span>Open App</span>
+                        <ExternalLink size={14} />
+                    </a>
                 </div>
             ))}
-
 
             {/* Import Card */}
             <div style={{
@@ -62,12 +64,18 @@ export const AppGrid: React.FC<AppGridProps> = ({ apps, onOpen }) => {
                 justifyContent: 'center',
                 alignItems: 'center',
                 gap: '1rem',
-                color: 'var(--text-secondary)'
-            }}>
-                <div style={{ fontSize: '1.5rem' }}>+</div>
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+            }} className="hover:bg-surface-hover">
+                <div style={{ 
+                    width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-surface-hover)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                    <Plus size={20} />
+                </div>
                 <span>New Project</span>
             </div>
         </div>
     );
 };
-

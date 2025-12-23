@@ -1,8 +1,11 @@
+import React from 'react';
+import { Cloud, Terminal } from 'lucide-react';
+
+const SCRIPT_URL = "https://rohan.github.io/paper/scripts/install.sh"; // Placeholder
+
 export const SetupCard = () => {
     const handleCopy = () => {
-        const cmd = "curl -sL http://localhost:5173/scripts/install.sh | bash";
-        // In prod, use the real domain
-        navigator.clipboard.writeText(cmd);
+        navigator.clipboard.writeText(`curl -sL ${SCRIPT_URL} | bash`);
         alert("Command copied to clipboard!");
     };
 
@@ -13,19 +16,18 @@ export const SetupCard = () => {
             borderRadius: '12px',
             padding: '2rem',
             maxWidth: '600px',
-            margin: '2rem auto',
+            margin: '4rem auto',
             textAlign: 'center'
         }}>
             <div style={{ 
-                width: '64px', height: '64px', background: '#222', borderRadius: '50%', margin: '0 auto 1.5rem',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem'
+                width: '64px', height: '64px', background: 'var(--bg-surface-hover)', borderRadius: '50%', margin: '0 auto 1.5rem',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border)'
             }}>
-                ☁️
+                <Cloud size={32} color="#888" />
             </div>
-            <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Initialize Paper Cloud</h2>
+            <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', fontWeight: 600 }}>Initialize Local Runtime</h2>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem', lineHeight: '1.6' }}>
                 To enable <code>*.paper</code> domains on this machine, the Paper Daemon needs to be installed once.
-                It runs silently in the background.
             </p>
 
             <div style={{ 
@@ -37,18 +39,22 @@ export const SetupCard = () => {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 gap: '1rem',
-                marginBottom: '1rem'
+                marginBottom: '1.5rem',
+                fontFamily: 'var(--font-mono)'
             }}>
-                <code className="text-sm font-mono" style={{ color: '#0070f3' }}>
-                    curl -sL https://rohan.github.io/paper/scripts/install.sh | bash
-                </code>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden' }}>
+                    <Terminal size={16} color="#444" />
+                    <code className="text-sm" style={{ color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>
+                        curl -sL {SCRIPT_URL} | bash
+                    </code>
+                </div>
                 <button className="btn" onClick={handleCopy} style={{ padding: '0.4rem 0.8rem' }}>
                     Copy
                 </button>
             </div>
             
             <p className="text-xs text-secondary">
-                Requires Python 3. macOS and Linux supported.
+                Runs silently in the background. macOS and Linux supported.
             </p>
         </div>
     );

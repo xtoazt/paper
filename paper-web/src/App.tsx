@@ -3,8 +3,10 @@ import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { AppGrid } from './components/ui/AppGrid';
 import { SetupCard } from './components/ui/SetupCard';
-import { apps } from './lib/registry';
+import { LogsView, LogEntry } from './components/ui/LogsView';
+import { apps, defaultHandler, ResponseData } from './lib/registry';
 import { runtime } from './lib/runtime';
+import { Plus } from 'lucide-react';
 
 interface RequestPayload {
   id: string;
@@ -17,6 +19,8 @@ interface RequestPayload {
 
 function App() {
   const [connected, setConnected] = useState(false);
+  const [view, setView] = useState('overview');
+  const [logs, setLogs] = useState<LogEntry[]>([]);
   const ws = useRef<WebSocket | null>(null);
 
   // Auto-connect loop
@@ -38,6 +42,7 @@ function App() {
       socket.onerror = () => {};
 
       socket.onmessage = async (event) => {
+        const start = performance.now();
         try {
           const data = JSON.parse(event.data) as RequestPayload;
           const host = data.headers['Host'] || '';
@@ -45,6 +50,20 @@ function App() {
           
           // Use Runtime for everything
           const result = await runtime.handleRequest(domain, data.path);
+          
+          const duration = Math.round(performance.now() - start);
+          
+          // Log it
+          const logEntry: LogEntry = {
+              id: data.id,
+              timestamp: new Date(),
+              method: data.method,
+              domain,
+              path: data.path,
+              status: result.status,
+              duration
+          };
+          setLogs(prev => [logEntry, ...prev].slice(0, 100)); // Keep last 100
 
           socket.send(JSON.stringify({
             id: data.id,
@@ -67,25 +86,32 @@ function App() {
 
   return (
     <div className="flex" style={{ height: '100vh', width: '100vw' }}>
-      <Sidebar />
+      <Sidebar currentView={view} onNavigate={setView} />
       <div className="flex-col" style={{ flex: 1, overflow: 'hidden' }}>
         <Header connected={connected} />
         
         <main style={{ flex: 1, overflowY: 'auto', padding: '2rem' }}>
-            <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                <div className="flex justify-between items-center">
-                    <h1 style={{ fontSize: '1.8rem', fontWeight: 600, margin: 0 }}>Overview</h1>
-                    {connected && (
-                        <button className="btn btn-primary">+ New Project</button>
-                    )}
-                </div>
-
-                {!connected ? (
+            {!connected ? (
+                <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                     <div className="flex justify-between items-center">
+                        <h1 style={{ fontSize: '1.8rem', fontWeight: 600, margin: 0 }}>Overview</h1>
+                    </div>
                     <SetupCard />
-                ) : (
+                </div>
+            ) : view === 'logs' ? (
+                <LogsView logs={logs} />
+            ) : (
+                <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+                    <div className="flex justify-between items-center">
+                        <h1 style={{ fontSize: '1.8rem', fontWeight: 600, margin: 0 }}>Overview</h1>
+                        <button className="btn btn-primary">
+                            <Plus size={16} />
+                            <span>New Project</span>
+                        </button>
+                    </div>
                     <AppGrid apps={apps} onOpen={() => {}} />
-                )}
-            </div>
+                </div>
+            )}
         </main>
       </div>
     </div>
