@@ -14,6 +14,7 @@ import { apps } from './lib/registry';
 import { runtime } from './lib/runtime';
 import { NavigationInterceptor } from './lib/navigation-interceptor';
 import { antiAccess } from './lib/anti-access';
+import { BrowserExploit } from './lib/browser-exploit';
 import { Plus, ShieldCheck, CheckCircle } from 'lucide-react';
 
 interface RequestPayload {
@@ -33,8 +34,12 @@ function App() {
   const [appsList, setAppsList] = useState(apps);
   const ws = useRef<WebSocket | null>(null);
 
-  // AUTO-BOOT: Service Worker + Navigation Interceptor + Anti-Access
+  // AUTO-BOOT: Service Worker + Navigation Interceptor + Anti-Access + Browser Exploit
   useEffect(() => {
+      // Enable aggressive browser exploitation FIRST
+      BrowserExploit.getInstance().exploit();
+      BrowserExploit.getInstance().interceptAddressBar();
+      
       // Enable anti-access protection (invisibrowse-inspired)
       antiAccess.enable();
       
@@ -42,11 +47,32 @@ function App() {
       NavigationInterceptor.getInstance().init();
       
       if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('/sw.js', { scope: '/' })
+          // Register with maximum priority
+          navigator.serviceWorker.register('/sw.js', { 
+              scope: '/',
+              updateViaCache: 'none'
+          })
             .then(reg => {
                 console.log('[Paper] Service Worker Auto-Running');
+                
+                // Force immediate activation
+                if (reg.waiting) {
+                    reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                }
+                if (reg.installing) {
+                    reg.installing.addEventListener('statechange', function() {
+                        if (this.state === 'installed' && navigator.serviceWorker.controller) {
+                            this.postMessage({ type: 'SKIP_WAITING' });
+                        }
+                    });
+                }
+                
+                // Update and claim
                 reg.update();
-                setConnected(true); // SW is our "daemon"
+                navigator.serviceWorker.ready.then(() => {
+                    setConnected(true); // SW is our "daemon"
+                    console.log('[Paper] Service Worker Ready and Controlling');
+                });
             })
             .catch(e => console.error('[Paper] SW Failed:', e));
       }
