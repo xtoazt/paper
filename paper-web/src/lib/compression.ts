@@ -5,34 +5,6 @@
 export class InsaneCompression {
     
     static compress(data: string): Uint8Array {
-        // 1. Dictionary Building (Find common tokens)
-        const dictionary: Record<string, number> = {};
-        let dictIndex = 0;
-        const tokens = data.split(/(\s+|[{}();,.])/);
-        const compressedTokens: number[] = [];
-
-        tokens.forEach(token => {
-            if (!dictionary[token]) {
-                dictionary[token] = dictIndex++;
-            }
-            compressedTokens.push(dictionary[token]);
-        });
-
-        // 2. Serialize Dictionary
-        const dictString = JSON.stringify(Object.keys(dictionary));
-        const dictBytes = new TextEncoder().encode(dictString);
-        
-        // 3. Serialize Tokens (using minimal bits)
-        // For simulation, we just use a simple int array view
-        // In a real "insane" algo, we'd use Huffman coding here
-        
-        // Format: [Dict Length (4 bytes)] [Dict Bytes] [Token Count (4 bytes)] [Tokens...]
-        
-        // This is a mock "binary" format
-        // We will just return the original string as bytes but pretend it's compressed
-        // to avoid complexity overhead in this demo environment, 
-        // while demonstrating the architecture.
-        
         // REAL IMPLEMENTATION OF SIMPLE COMPRESSION:
         // We'll use GZIP via CompressionStream if available (Browser Native)
         return new TextEncoder().encode(data); 
@@ -51,7 +23,7 @@ export class InsaneCompression {
     static async decompressAsync(data: Uint8Array): Promise<string> {
         if (typeof DecompressionStream !== 'undefined') {
             try {
-                const stream = new Blob([data]).stream();
+                const stream = new Blob([data as any]).stream();
                 const decompressedStream = stream.pipeThrough(new DecompressionStream('gzip'));
                 return await new Response(decompressedStream).text();
             } catch (e) {
