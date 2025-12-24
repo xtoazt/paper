@@ -1,4 +1,4 @@
-import { Home, Activity, FileText, HardDrive } from 'lucide-react';
+import { Home, Activity, FileText, HardDrive, ShieldCheck } from 'lucide-react';
 
 interface SidebarProps {
     currentView: string;
@@ -53,6 +53,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
                     label="Traffic Logs" 
                     active={currentView === 'logs'}
                     onClick={() => onNavigate('logs')}
+                />
+                <NavItem 
+                    icon={<ShieldCheck size={18} />} 
+                    label="Security" 
+                    active={currentView === 'security'}
+                    onClick={() => onNavigate('security')}
                 />
             </nav>
 

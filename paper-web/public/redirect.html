@@ -1,0 +1,23 @@
+// Redirect page that immediately rewrites .paper URLs
+// This page is opened when user clicks "Open App"
+// It then redirects to the .paper domain, which the SW intercepts
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Redirecting...</title>
+    <script>
+        // Get domain from URL params
+        const params = new URLSearchParams(window.location.search);
+        const domain = params.get('domain') || 'blog.paper';
+        
+        // Immediately redirect - Service Worker will intercept
+        window.location.replace(`http://${domain}`);
+    </script>
+</head>
+<body>
+    <p>Redirecting to {domain}...</p>
+</body>
+</html>
+

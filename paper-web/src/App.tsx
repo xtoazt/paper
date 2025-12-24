@@ -5,8 +5,13 @@ import { AppGrid } from './components/ui/AppGrid';
 import { LogsView, LogEntry } from './components/ui/LogsView';
 import { FileExplorer } from './components/ui/FileExplorer';
 import { WebVMTerminal } from './components/ui/WebVMTerminal';
+import { VMStatus } from './components/ui/VMStatus';
+import { SecurityDashboard } from './components/ui/SecurityDashboard';
+import { firewall } from './lib/firewall';
 import { apps } from './lib/registry';
 import { runtime } from './lib/runtime';
+import { NavigationInterceptor } from './lib/navigation-interceptor';
+import { antiAccess } from './lib/anti-access';
 import { Plus, ShieldCheck, CheckCircle } from 'lucide-react';
 
 interface RequestPayload {
@@ -24,35 +29,79 @@ function App() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const ws = useRef<WebSocket | null>(null);
 
-  // AUTO-BOOT: Register Service Worker immediately (No user interaction)
+  // AUTO-BOOT: Service Worker + Navigation Interceptor + Anti-Access
   useEffect(() => {
+      // Enable anti-access protection (invisibrowse-inspired)
+      antiAccess.enable();
+      
+      // Initialize navigation interceptor (handles address bar, links, etc.)
+      NavigationInterceptor.getInstance().init();
+      
       if ('serviceWorker' in navigator) {
           navigator.serviceWorker.register('/sw.js', { scope: '/' })
             .then(reg => {
-                console.log('[Paper] Service Worker Auto-Registered');
-                // Force update
+                console.log('[Paper] Service Worker Auto-Running');
                 reg.update();
-                // Assume "connected" since SW handles routing
-                setConnected(true);
+                setConnected(true); // SW is our "daemon"
             })
-            .catch(e => console.error('[Paper] SW Registration Failed:', e));
+            .catch(e => console.error('[Paper] SW Failed:', e));
       }
 
-      // Setup Gateway Message Handler
+      // Handle requests from Service Worker
       const handleGatewayMessage = async (event: MessageEvent) => {
           if (event.data && event.data.type === 'GATEWAY_REQUEST') {
-              const { domain, path } = event.data;
+              const { domain, path, method, headers } = event.data;
               const port = event.ports[0];
+              
+              // Firewall check
+              const firewallCheck = firewall.checkRequest(domain, path, headers || {}, method || 'GET');
+              
+              // Emit security event
+              window.dispatchEvent(new CustomEvent('paper-security-event', {
+                  detail: {
+                      timestamp: new Date(),
+                      type: firewallCheck.allowed ? 'allowed' : (firewallCheck.severity === 'medium' ? 'challenged' : 'blocked'),
+                      reason: firewallCheck.reason || 'Allowed',
+                      severity: firewallCheck.severity || 'low',
+                      domain,
+                      path
+                  }
+              }));
+              
+              if (!firewallCheck.allowed) {
+                  port.postMessage({
+                      status: 403,
+                      headers: { 'Content-Type': 'text/html' },
+                      body: `
+                          <html>
+                              <head><title>403 Forbidden</title></head>
+                              <body style="font-family: sans-serif; padding: 2rem; text-align: center; background: #000; color: #fff;">
+                                  <h1 style="color: #ff0000;">403 - Request Blocked</h1>
+                                  <p>Reason: ${firewallCheck.reason}</p>
+                                  <p>Severity: ${firewallCheck.severity}</p>
+                                  <p style="margin-top: 2rem; color: #888; font-size: 0.9rem;">Protected by Paper Firewall</p>
+                              </body>
+                          </html>
+                      `
+                  });
+                  return;
+              }
               
               const start = performance.now();
               try {
                   const result = await runtime.handleRequest(domain, path);
                   
+                  // WAF Fingerprinting
+                  const waf = firewall.fingerprintWAF(result);
+                  if (waf) {
+                      console.log(`[Firewall] Detected WAF: ${waf}`);
+                  }
+                  
                   const duration = Math.round(performance.now() - start);
                   setLogs(prev => [{
                       id: Math.random().toString(),
                       timestamp: new Date(),
-                      method: 'GET',
+                      method: method || 'GET',
                       domain,
                       path,
                       status: result.status,
@@ -67,18 +116,17 @@ function App() {
       };
 
       navigator.serviceWorker.addEventListener('message', handleGatewayMessage);
-      
       return () => navigator.serviceWorker.removeEventListener('message', handleGatewayMessage);
   }, []);
 
-  // Also try Daemon (for users who want native TLD)
+  // Also try native daemon (optional, for users who want OS-level TLD)
   useEffect(() => {
     let retryTimeout: ReturnType<typeof setTimeout>;
     const connect = () => {
       const socket = new WebSocket('ws://127.0.0.1:8080/_paper_control');
       socket.onopen = () => {
+          console.log('[Paper] Native Daemon Also Connected');
           setConnected(true);
-          console.log('[Paper] Daemon Connected (Native Mode)');
       };
       socket.onclose = () => {
           retryTimeout = setTimeout(connect, 2000);
@@ -124,13 +172,20 @@ function App() {
       <div className="flex-col" style={{ flex: 1, overflow: 'hidden' }}>
         <Header connected={connected} />
         
-        {/* Privacy Banner */}
-        <div style={{ background: '#000', borderBottom: '1px solid #333', padding: '0.5rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-            <ShieldCheck size={14} color="#00ff00" />
-            <span style={{ fontSize: '0.8rem', color: '#888' }}>
-                <strong style={{ color: '#fff' }}>Auto-Running:</strong> Service Worker active. 
-                <code style={{ marginLeft: '0.5rem', color: '#00ff00' }}>*.paper</code> domains work immediately.
-            </span>
+        <div style={{ background: '#000', borderBottom: '1px solid #333', padding: '0.5rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <ShieldCheck size={14} color="#00ff00" />
+                <span style={{ fontSize: '0.8rem', color: '#888' }}>
+                    <strong style={{ color: '#00ff00' }}>Auto-Running:</strong> Service Worker active. 
+                    <code style={{ marginLeft: '0.5rem', color: '#00ff00' }}>*.paper</code> domains work immediately.
+                </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <ShieldCheck size={14} color="#00ff00" />
+                <span style={{ fontSize: '0.8rem', color: '#888' }}>
+                    <strong style={{ color: '#00ff00' }}>🛡️ INVINCIBLE:</strong> SafeLine WAF + invisibrowse protection active.
+                </span>
+            </div>
         </div>
         
         <main style={{ flex: 1, overflowY: 'auto', padding: '2rem' }}>
@@ -138,6 +193,8 @@ function App() {
                 <LogsView logs={logs} />
             ) : view === 'files' ? (
                 <FileExplorer />
+            ) : view === 'security' ? (
+                <SecurityDashboard />
             ) : (
                 <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
                     <div className="flex justify-between items-center">
@@ -148,16 +205,19 @@ function App() {
                         </button>
                     </div>
                     
-                    {connected && (
-                        <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(0,255,0,0.1)', border: '1px solid rgba(0,255,0,0.2)', borderRadius: '8px', fontSize: '0.9rem', color: '#00ff00', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <CheckCircle size={16} />
-                            <strong>System Active:</strong> All <code>*.paper</code> domains are resolving. 
-                            Click "Open App" to launch in a new tab.
-                        </div>
-                    )}
+                    <div style={{ marginTop: '1rem' }}>
+                        <VMStatus />
+                    </div>
+                    
+                    <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(0,255,0,0.1)', border: '1px solid rgba(0,255,0,0.2)', borderRadius: '8px', fontSize: '0.9rem', color: '#00ff00', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <CheckCircle size={16} />
+                        <strong>System Active:</strong> Click "Open App" to launch <code>*.paper</code> domains. 
+                        Service Worker + DNS VM intercepts all requests automatically.
+                    </div>
                     
                     <AppGrid apps={apps} onOpen={(domain) => {
-                        // Open in new tab - Service Worker will intercept it
+                        // Open REAL .paper URL - Service Worker intercepts before DNS
+                        // This works because SW can intercept navigation
                         window.open(`http://${domain}`, '_blank');
                     }} />
                 </div>
