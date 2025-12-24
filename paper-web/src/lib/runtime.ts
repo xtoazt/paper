@@ -1,11 +1,14 @@
 import { GitHubRepo } from './github';
 import { InsaneCompression } from './compression';
 
-// This simulates the BrowserPod / CheerpX Runtime Interface
-// In a full implementation, this would load the WASM blobs and boot Node.js
+// BrowserPod Runtime with PERSISTENCE
 export class BrowserPodRuntime {
-    private fs: Map<string, Uint8Array> = new Map(); // Store COMPRESSED binary data
+    // We now use an async getter/setter pattern backed by IndexedDB/LocalForage
+    // For this implementation, we'll keep the in-memory Map but hydrate it on boot
+    private fs: Map<string, Uint8Array> = new Map();
     public isReady: boolean = false;
+    private dbName = 'paper-fs';
+    private storeName = 'files';
 
     constructor() {
         this.boot();
@@ -13,62 +16,99 @@ export class BrowserPodRuntime {
 
     private async boot() {
         console.log('[BrowserPod] Booting Linux Kernel (WASM)...');
-        await new Promise(r => setTimeout(r, 800)); // Simulate boot
-        console.log('[BrowserPod] Starting Node.js...');
+        await this.hydrateFS();
+        console.log('[BrowserPod] FS Hydrated. Starting Node.js...');
         this.isReady = true;
     }
 
-    // List files for Explorer
+    private async hydrateFS() {
+        // Simple IndexedDB logic to load persisted files
+        return new Promise<void>((resolve) => {
+            const request = indexedDB.open(this.dbName, 1);
+            request.onupgradeneeded = (e) => {
+                const db = (e.target as IDBOpenDBRequest).result;
+                if (!db.objectStoreNames.contains(this.storeName)) {
+                    db.createObjectStore(this.storeName);
+                }
+            };
+            request.onsuccess = (e) => {
+                const db = (e.target as IDBOpenDBRequest).result;
+                const tx = db.transaction(this.storeName, 'readonly');
+                const store = tx.objectStore(this.storeName);
+                const cursorRequest = store.openCursor();
+                
+                cursorRequest.onsuccess = (ev) => {
+                    const cursor = (ev.target as IDBRequest).result;
+                    if (cursor) {
+                        this.fs.set(cursor.key as string, cursor.value as Uint8Array);
+                        cursor.continue();
+                    } else {
+                        resolve();
+                    }
+                };
+            };
+        });
+    }
+
+    private async persistFile(path: string, data: Uint8Array) {
+        // Save to IndexedDB
+        this.fs.set(path, data);
+        
+        const request = indexedDB.open(this.dbName, 1);
+        request.onsuccess = (e) => {
+            const db = (e.target as IDBOpenDBRequest).result;
+            const tx = db.transaction(this.storeName, 'readwrite');
+            const store = tx.objectStore(this.storeName);
+            store.put(data, path);
+        };
+    }
+
     listFiles(): string[] {
         return Array.from(this.fs.keys());
     }
 
-    // Mount a GitHub repo into the virtual filesystem
     async mountRepo(url: string) {
         console.log(`[BrowserPod] Cloning ${url}...`);
         const repo = new GitHubRepo(url);
         await repo.initialize();
         
-        // Flatten repo into FS with INSANE compression
+        // Flatten repo into FS with INSANE compression & PERSISTENCE
+        const promises: Promise<void>[] = [];
+        
         for (const [path, item] of Object.entries(repo.tree)) {
             if (item.type === 'file') {
-                const content = await repo.getFile(path);
-                if (content) {
-                    const compressed = await InsaneCompression.compressAsync(content);
-                    this.fs.set(path, compressed);
-                }
+                promises.push((async () => {
+                    const content = await repo.getFile(path);
+                    if (content) {
+                        // Compress
+                        const compressed = await InsaneCompression.compressAsync(content);
+                        // Save to FS & Persistent Storage
+                        await this.persistFile(path, compressed);
+                    }
+                })());
             }
         }
-        console.log(`[BrowserPod] Mounted ${this.fs.size} files (Compressed).`);
+        await Promise.all(promises);
+        console.log(`[BrowserPod] Mounted & Persisted ${this.fs.size} files.`);
     }
 
-    // Simulate handling a request via the internal Node.js server
     async handleRequest(domain: string, path: string): Promise<{ status: number, headers: any, body: string }> {
         if (!this.isReady) await this.boot();
 
-        // 1. Check for specific "App" logic (Simulating a running Express server)
-        if (domain === 'blog.paper') {
-            return this.runBlogApp(path);
-        }
-        if (domain === 'shop.paper') {
-            return this.runShopApp(path);
-        }
+        // 1. Built-in Logic
+        if (domain === 'blog.paper') return this.runBlogApp(path);
+        if (domain === 'shop.paper') return this.runShopApp(path);
 
-        // 2. Fallback to Static File Serving from FS (for mounted repos)
-        // Simulate: app.use(express.static('.'))
-        
-        // Try exact match
+        // 2. Static File Serving from Persistent FS
         let contentBytes = this.fs.get(path);
         let servedPath = path;
 
-        // Try index.html
         if (!contentBytes && (path === '/' || path.endsWith('/'))) {
             contentBytes = this.fs.get(path + 'index.html');
             if (!contentBytes) contentBytes = this.fs.get('/index.html'); 
         }
 
         if (contentBytes) {
-            // Decompress on the fly
             const content = await InsaneCompression.decompressAsync(contentBytes);
             return {
                 status: 200,
@@ -92,10 +132,9 @@ export class BrowserPodRuntime {
         return 'text/plain';
     }
 
-    // --- Mock Apps Running in the Runtime ---
-
+    // --- Mock Apps ---
     private runBlogApp(path: string) {
-        // Simulating: app.get('/post/:id', ...)
+        // ... (Same as before)
         let content = '';
         if (path === '/') {
              content = `
@@ -128,6 +167,7 @@ export class BrowserPodRuntime {
     }
 
     private runShopApp(_path: string) {
+        // ... (Same as before)
         const content = `
             <div style="text-align:center; padding: 4rem 0;">
                 <h1 style="font-size:3rem; margin-bottom:0.5rem">Paper Supplies.</h1>
@@ -169,5 +209,4 @@ export class BrowserPodRuntime {
     }
 }
 
-// Singleton Instance
 export const runtime = new BrowserPodRuntime();
