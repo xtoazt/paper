@@ -79,7 +79,7 @@ export class UnbreakableWall {
         }
     }
 
-    checkRequest(ip: string, path: string): { allowed: boolean, reason?: string } {
+    checkRequest(ip: string, _path: string): { allowed: boolean, reason?: string } {
         if (!this.active) return { allowed: true };
 
         // Check IP block

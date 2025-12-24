@@ -35,7 +35,6 @@ export class PaperDNSVM {
             console.error('[PaperDNS] VM boot failed:', e);
             // Fallback: Mark as ready anyway (Service Worker handles it)
             this.ready = true;
-            this.vmReady = true;
         }
     }
 

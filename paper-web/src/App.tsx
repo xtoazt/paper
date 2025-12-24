@@ -11,6 +11,8 @@ import { DeploymentLogsView } from './components/ui/DeploymentLogsView';
 import { ImportModal } from './components/ui/ImportModal';
 import { DashboardSettings } from './components/ui/DashboardSettings';
 import { unbreakableWall } from './lib/unbreakable-wall';
+import { unbreakableFirewall } from './lib/unbreakable-firewall';
+import { paperSelfHost } from './lib/paper-self-host';
 import { firewall } from './lib/firewall';
 import { apps } from './lib/registry';
 import { runtime } from './lib/runtime';

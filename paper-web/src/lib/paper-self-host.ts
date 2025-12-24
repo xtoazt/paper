@@ -63,7 +63,7 @@ export class PaperSelfHost {
     private setupOfflineFallback() {
         // Use Service Worker to cache everything
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.ready.then(reg => {
+            navigator.serviceWorker.ready.then(() => {
                 // The Service Worker will handle offline caching
                 console.log('[SelfHost] Offline fallback ready');
             });

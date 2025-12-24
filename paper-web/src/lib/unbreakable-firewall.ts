@@ -7,8 +7,6 @@ export class UnbreakableFirewall {
     private blockedIPs: Set<string> = new Set();
     private allowedOrigins: Set<string> = new Set();
     private rateLimits: Map<string, number[]> = new Map();
-    private extensionBlocked: boolean = true;
-    private fingerprint: string = '';
 
     static getInstance(): UnbreakableFirewall {
         if (!UnbreakableFirewall.instance) {
@@ -23,14 +21,15 @@ export class UnbreakableFirewall {
     }
 
     private generateFingerprint() {
-        // Generate unique fingerprint for this session
+        // Generate unique fingerprint for this session (for future use)
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         if (ctx) {
             ctx.textBaseline = 'top';
             ctx.font = '14px Arial';
             ctx.fillText('Paper Firewall', 2, 2);
-            this.fingerprint = canvas.toDataURL().slice(0, 50);
+            // Fingerprint stored but not used yet
+            const _fingerprint = canvas.toDataURL().slice(0, 50);
         }
     }
 
@@ -140,7 +139,8 @@ export class UnbreakableFirewall {
             // Check for unauthorized DOM modifications
             const unauthorizedScripts = document.querySelectorAll('script:not([data-paper-allowed])');
             unauthorizedScripts.forEach(script => {
-                if (!script.src || !script.src.includes(window.location.origin)) {
+                const scriptEl = script as HTMLScriptElement;
+                if (!scriptEl.src || !scriptEl.src.includes(window.location.origin)) {
                     console.warn('[Firewall] Unauthorized script detected');
                 }
             });
