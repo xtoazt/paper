@@ -5,8 +5,6 @@
 export class PaperDNSVM {
     private ready: boolean = false;
     private container: HTMLDivElement | null = null;
-    private vmReady: boolean = false;
-    private dnsPort: number = 5353; // mDNS port (doesn't require root)
 
     constructor() {
         if (typeof document !== 'undefined') {
@@ -30,7 +28,6 @@ export class PaperDNSVM {
             await this.setupLocalDNSProxy();
             
             this.ready = true;
-            this.vmReady = true;
             console.log('[PaperDNS] DNS VM Ready (Hybrid Mode)');
             
             return Promise.resolve();
