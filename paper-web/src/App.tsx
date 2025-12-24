@@ -6,6 +6,7 @@ import { SetupCard } from './components/ui/SetupCard';
 import { LogsView, LogEntry } from './components/ui/LogsView';
 import { FileExplorer } from './components/ui/FileExplorer';
 import { AppRenderer } from './components/ui/AppRenderer';
+import { WebVMTerminal } from './components/ui/WebVMTerminal';
 import { apps } from './lib/registry';
 import { runtime } from './lib/runtime';
 import { Plus } from 'lucide-react';
@@ -115,6 +116,8 @@ function App() {
           <AppRenderer domain={activeApp} onClose={() => setActiveApp(null)} />
       )}
       
+      <WebVMTerminal />
+
       <div className="flex" style={{ height: '100vh', width: '100vw' }}>
       <Sidebar currentView={view} onNavigate={setView} />
       <div className="flex-col" style={{ flex: 1, overflow: 'hidden' }}>
