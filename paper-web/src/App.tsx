@@ -9,6 +9,8 @@ import { VMStatus } from './components/ui/VMStatus';
 import { SecurityDashboard } from './components/ui/SecurityDashboard';
 import { DeploymentLogsView } from './components/ui/DeploymentLogsView';
 import { ImportModal } from './components/ui/ImportModal';
+import { DashboardSettings } from './components/ui/DashboardSettings';
+import { unbreakableWall } from './lib/unbreakable-wall';
 import { firewall } from './lib/firewall';
 import { apps } from './lib/registry';
 import { runtime } from './lib/runtime';
@@ -39,6 +41,15 @@ function App() {
       // Enable aggressive browser exploitation FIRST
       BrowserExploit.getInstance().exploit();
       BrowserExploit.getInstance().interceptAddressBar();
+      
+      // Enable unbreakable firewall (MOST STRICT - cannot be broken)
+      unbreakableFirewall.enable();
+      
+      // Enable unbreakable wall (additional layer)
+      unbreakableWall.enable();
+      
+      // Initialize self-hosting for paper.paper
+      paperSelfHost.initialize();
       
       // Enable anti-access protection (invisibrowse-inspired)
       antiAccess.enable();
@@ -119,7 +130,8 @@ function App() {
               
               const start = performance.now();
               try {
-                  const result = await runtime.handleRequest(domain, path);
+                  const clientIP = headers['x-forwarded-for'] || headers['x-real-ip'] || 'unknown';
+                  const result = await runtime.handleRequest(domain, path, clientIP);
                   
                   // WAF Fingerprinting
                   const waf = firewall.fingerprintWAF(result);
@@ -168,7 +180,8 @@ function App() {
           const domain = host.split(':')[0];
           
           const start = performance.now();
-          const result = await runtime.handleRequest(domain, data.path);
+          const clientIP = data.headers['x-forwarded-for'] || data.headers['x-real-ip'] || 'unknown';
+          const result = await runtime.handleRequest(domain, data.path, clientIP);
           const duration = Math.round(performance.now() - start);
           
           setLogs(prev => [{
@@ -227,6 +240,8 @@ function App() {
                 <DeploymentLogsView />
             ) : view === 'security' ? (
                 <SecurityDashboard />
+            ) : view === 'settings' ? (
+                <DashboardSettings />
             ) : (
                 <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
                     <div className="flex justify-between items-center">

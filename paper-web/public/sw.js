@@ -57,26 +57,23 @@ self.addEventListener('fetch', (event: FetchEvent) => {
         return;
     }
     
-    // Strategy 3: Intercept ALL requests and check if they're .paper related
-    // This catches requests that might have failed DNS
+    // Strategy 3: Intercept ALL requests - check for .paper even in failed requests
+    // This is CRITICAL for catching DNS failures
     event.respondWith(
         fetch(event.request).catch((error) => {
-            // If it's a network error, check if it might be a .paper domain
             const hostname = url.hostname;
             
-            // Check if hostname looks like it could be .paper (even if DNS failed)
+            // If it's a network/DNS error and looks like .paper, redirect to gateway
             if (hostname.includes('paper') || hostname.endsWith('.paper') || hostname === 'paper') {
                 const domain = hostname.endsWith('.paper') ? hostname : 
                               hostname === 'paper' ? 'blog.paper' : 
-                              `${hostname}.paper`;
-                console.log('[SW] Intercepted failed .paper request, redirecting to gateway:', domain);
-                return fetch(`/_gateway/${domain}${url.pathname}${url.search}`);
-            }
-            
-            // For other errors, try to see if it's a navigation request that failed
-            if (event.request.mode === 'navigate') {
-                // Navigation request failed - might be .paper domain
-                console.log('[SW] Navigation request failed, might be .paper domain');
+                              `${hostname.replace(/\.paper.*$/, '')}.paper`;
+                console.log('[SW] Caught failed .paper DNS, redirecting to gateway:', domain);
+                return fetch(`/_gateway/${domain}${url.pathname}${url.search}`, {
+                    method: event.request.method,
+                    headers: event.request.headers,
+                    body: event.request.body
+                });
             }
             
             throw error;
@@ -87,6 +84,50 @@ self.addEventListener('fetch', (event: FetchEvent) => {
 async function handlePaperDomain(request: Request, url: URL) {
     const domain = url.hostname;
     const path = url.pathname + url.search;
+    
+    // Special handling for paper.paper (self-hosted, always accessible)
+    if (domain === 'paper.paper') {
+        // paper.paper is self-hosted and cannot be blocked
+        const gatewayUrl = new URL(`/_gateway/paper.paper${path}`, self.location.origin);
+        try {
+            const response = await fetch(gatewayUrl);
+            const headers = new Headers(response.headers);
+            headers.set('X-Paper-Self-Hosted', 'true');
+            headers.set('X-Unbreakable', 'true');
+            return new Response(response.body, {
+                status: response.status,
+                statusText: response.statusText,
+                headers: headers
+            });
+        } catch (e) {
+            // Fallback: serve minimal self-hosted dashboard
+            return new Response(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Paper - Self-Hosted</title>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: -apple-system, sans-serif; background: #000; color: #fff; padding: 2rem; text-align: center; }
+                        h1 { font-size: 3rem; margin-bottom: 1rem; }
+                        .status { padding: 1rem; background: rgba(0,255,0,0.1); border: 1px solid rgba(0,255,0,0.2); border-radius: 8px; margin: 2rem 0; }
+                    </style>
+                </head>
+                <body>
+                    <h1>Paper</h1>
+                    <div class="status">
+                        <strong style="color: #00ff00;">✓ Self-Hosted</strong><br>
+                        <span style="color: #888;">This site runs independently and cannot be blocked</span>
+                    </div>
+                    <p><a href="/_gateway/blog.paper/" style="color: #0070f3;">blog.paper</a> | <a href="/_gateway/shop.paper/" style="color: #0070f3;">shop.paper</a></p>
+                </body>
+                </html>
+            `, {
+                status: 200,
+                headers: { 'Content-Type': 'text/html', 'X-Paper-Self-Hosted': 'true' }
+            });
+        }
+    }
     
     // Immediately rewrite to gateway (same origin, bypasses DNS)
     const gatewayUrl = new URL(`/_gateway/${domain}${path}`, self.location.origin);
@@ -100,6 +141,7 @@ async function handlePaperDomain(request: Request, url: URL) {
         headers.set('X-Content-Type-Options', 'nosniff');
         headers.set('Referrer-Policy', 'no-referrer');
         headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+        headers.set('X-Unbreakable-Firewall', 'active');
         
         return new Response(response.body, {
             status: response.status,

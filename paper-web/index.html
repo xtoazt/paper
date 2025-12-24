@@ -7,27 +7,33 @@
     <meta name="referrer" content="no-referrer" />
     <title>Paper</title>
     <script>
-      // CRITICAL: Register Service Worker IMMEDIATELY (before React loads)
-      // This must run BEFORE any DNS lookup happens
+      // CRITICAL: Ultra-Aggressive Preload - Runs BEFORE everything
+      // This intercepts .paper domains at the lowest possible level
       (function() {
+        'use strict';
+        
+        // 1. Register Service Worker IMMEDIATELY
         if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('/sw.js', { scope: '/' })
+          navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' })
             .then(function(reg) {
               console.log('[Preload] Service Worker registered');
+              
               // Force immediate activation
               if (reg.waiting) {
                 reg.waiting.postMessage({ type: 'SKIP_WAITING' });
               }
               if (reg.installing) {
                 reg.installing.addEventListener('statechange', function() {
-                  if (this.state === 'installed' && navigator.serviceWorker.controller) {
+                  if (this.state === 'installed') {
                     this.postMessage({ type: 'SKIP_WAITING' });
                   }
                 });
               }
-              // Claim clients immediately
+              
+              // Claim clients and update
               navigator.serviceWorker.ready.then(function() {
                 reg.update();
+                console.log('[Preload] Service Worker ready and controlling');
               });
             })
             .catch(function(e) {
@@ -35,15 +41,23 @@
             });
         }
         
-        // Override fetch IMMEDIATELY (before any other scripts)
+        // 2. Override fetch IMMEDIATELY (before any other scripts)
         (function() {
           const originalFetch = window.fetch;
           window.fetch = function(input, init) {
             try {
-              const url = typeof input === 'string' ? new URL(input, window.location.href) : 
-                         input instanceof URL ? input : new URL(input.url, window.location.href);
+              let url;
+              if (typeof input === 'string') {
+                url = new URL(input, window.location.href);
+              } else if (input instanceof URL) {
+                url = input;
+              } else {
+                url = new URL(input.url, window.location.href);
+              }
+              
               if (url.hostname.endsWith('.paper') || url.hostname === 'paper') {
                 const gatewayUrl = '/_gateway/' + url.hostname + url.pathname + url.search;
+                console.log('[Preload] Intercepted .paper fetch:', url.hostname, '->', gatewayUrl);
                 return originalFetch.call(this, gatewayUrl, init);
               }
             } catch (e) {
@@ -51,8 +65,54 @@
             }
             return originalFetch.call(this, input, init);
           };
-          console.log('[Preload] Fetch overridden');
+          console.log('[Preload] Fetch API overridden');
         })();
+        
+        // 3. Override XMLHttpRequest
+        (function() {
+          const OriginalXHR = window.XMLHttpRequest;
+          window.XMLHttpRequest = function() {
+            const xhr = new OriginalXHR();
+            const originalOpen = xhr.open;
+            xhr.open = function(method, url, async, user, password) {
+              try {
+                const urlObj = new URL(url, window.location.href);
+                if (urlObj.hostname.endsWith('.paper') || urlObj.hostname === 'paper') {
+                  const gatewayUrl = '/_gateway/' + urlObj.hostname + urlObj.pathname + urlObj.search;
+                  console.log('[Preload] Intercepted .paper XHR:', urlObj.hostname);
+                  return originalOpen.call(this, method, gatewayUrl, async !== false, user, password);
+                }
+              } catch (e) {
+                // Invalid URL
+              }
+              return originalOpen.call(this, method, url, async !== false, user, password);
+            };
+            return xhr;
+          };
+          console.log('[Preload] XMLHttpRequest overridden');
+        })();
+        
+        // 4. Intercept navigation attempts
+        (function() {
+          const originalPushState = history.pushState;
+          history.pushState = function(state, title, url) {
+            if (url) {
+              try {
+                const urlObj = new URL(url.toString(), window.location.href);
+                if (urlObj.hostname.endsWith('.paper') || urlObj.hostname === 'paper') {
+                  const gatewayUrl = '/_gateway/' + urlObj.hostname + urlObj.pathname + urlObj.search;
+                  console.log('[Preload] Intercepted .paper pushState');
+                  return originalPushState.call(this, state, title, gatewayUrl);
+                }
+              } catch (e) {
+                // Invalid URL
+              }
+            }
+            return originalPushState.call(this, state, title, url);
+          };
+        })();
+        
+        console.log('[Preload] All preload interceptors active');
       })();
     </script>
   </head>

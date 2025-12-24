@@ -1,6 +1,9 @@
 import { UniversalGitRepo } from './git-repo';
 import { InsaneCompression } from './compression';
 import { deploymentLogger } from './deployment-logs';
+import { unbreakableWall } from './unbreakable-wall';
+import { unbreakableFirewall } from './unbreakable-firewall';
+import { paperSelfHost } from './paper-self-host';
 
 // BrowserPod Runtime with PERSISTENCE
 export class BrowserPodRuntime {
@@ -13,6 +16,8 @@ export class BrowserPodRuntime {
 
     constructor() {
         this.boot();
+        // Initialize self-hosting for paper.paper
+        paperSelfHost.initialize();
     }
 
     private async boot() {
@@ -117,13 +122,73 @@ export class BrowserPodRuntime {
         }
     }
 
-    async handleRequest(domain: string, path: string): Promise<{ status: number, headers: any, body: string }> {
+    async handleRequest(domain: string, path: string, clientIP: string = 'unknown'): Promise<{ status: number, headers: any, body: string }> {
         if (!this.isReady) await this.boot();
+
+        // Unbreakable Firewall check (MOST STRICT)
+        const ip = clientIP || 'unknown';
+        // paper.paper is self-hosted and CANNOT be blocked
+        const isPaperPaper = domain === 'paper.paper';
+        const firewallCheck = unbreakableFirewall.checkRequest(
+            isPaperPaper ? 'self-hosted' : ip, 
+            `${domain}${path}`, 
+            { host: domain }
+        );
+        if (!firewallCheck.allowed && !isPaperPaper) {
+            return {
+                status: 403,
+                headers: { 'Content-Type': 'text/html' },
+                body: `<!DOCTYPE html>
+<html>
+<head>
+    <title>403 Forbidden</title>
+    <style>
+        body { font-family: monospace; padding: 2rem; background: #000; color: #ff0000; text-align: center; }
+        h1 { font-size: 2rem; margin-bottom: 1rem; }
+        p { color: #888; }
+    </style>
+</head>
+<body>
+    <h1>🔒 403 - Access Denied</h1>
+    <p>Reason: ${firewallCheck.reason}</p>
+    <p style="margin-top: 2rem; color: #666;">Unbreakable Firewall - Cannot be bypassed</p>
+</body>
+</html>`
+            };
+        }
+
+        // Unbreakable Wall check (additional layer)
+        const wallCheck = unbreakableWall.checkRequest(ip, path);
+        if (!wallCheck.allowed) {
+            return {
+                status: 403,
+                headers: { 'Content-Type': 'text/html' },
+                body: `<!DOCTYPE html>
+<html>
+<head>
+    <title>403 Forbidden</title>
+    <style>
+        body { font-family: sans-serif; padding: 2rem; background: #000; color: #fff; text-align: center; }
+        h1 { color: #ff0000; }
+    </style>
+</head>
+<body>
+    <h1>403 - Request Blocked</h1>
+    <p>Reason: ${wallCheck.reason}</p>
+    <p style="color: #888; margin-top: 2rem;">Protected by Unbreakable Wall</p>
+</body>
+</html>`
+            };
+        }
 
         // Normalize path
         if (!path.startsWith('/')) path = '/' + path;
 
         // 1. Built-in Logic
+        if (domain === 'paper.paper') {
+            // Self-hosted dashboard - always accessible
+            return await paperSelfHost.servePaperPaper(path);
+        }
         if (domain === 'blog.paper') return this.runBlogApp(path);
         if (domain === 'shop.paper') return this.runShopApp(path);
 

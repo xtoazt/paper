@@ -1,6 +1,6 @@
 import React from 'react';
 import { VirtualApp } from '../../lib/registry';
-import { ExternalLink, Layers, Plus } from 'lucide-react';
+import { ExternalLink, Layers, Plus, Shield } from 'lucide-react';
 
 interface AppGridProps {
     apps: VirtualApp[];
@@ -29,12 +29,30 @@ export const AppGrid: React.FC<AppGridProps> = ({ apps, onOpen, onImport }) => {
                 }}>
                     <div className="flex justify-between items-center">
                         <div style={{ fontWeight: 600, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <Layers size={20} color="#666" />
+                            {app.domain === 'paper.paper' ? (
+                                <Shield size={20} color="#00ff00" />
+                            ) : (
+                                <Layers size={20} color="#666" />
+                            )}
                             {app.name}
+                            {app.domain === 'paper.paper' && (
+                                <span style={{ 
+                                    fontSize: '0.75rem', 
+                                    padding: '0.25rem 0.5rem', 
+                                    background: 'rgba(0,255,0,0.1)', 
+                                    border: '1px solid rgba(0,255,0,0.2)', 
+                                    borderRadius: '4px',
+                                    color: '#00ff00',
+                                    fontWeight: 500
+                                }}>
+                                    Self-Hosted
+                                </span>
+                            )}
                         </div>
                         <div style={{ 
                             width: '8px', height: '8px', borderRadius: '50%', 
-                            background: '#0070f3', boxShadow: '0 0 10px rgba(0,112,243,0.5)' 
+                            background: app.domain === 'paper.paper' ? '#00ff00' : '#0070f3', 
+                            boxShadow: app.domain === 'paper.paper' ? '0 0 10px rgba(0,255,0,0.5)' : '0 0 10px rgba(0,112,243,0.5)' 
                         }}></div>
                     </div>
                     

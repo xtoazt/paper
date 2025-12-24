@@ -5,6 +5,8 @@
 export class AntiAccessProtection {
     private static instance: AntiAccessProtection;
     private protectionActive: boolean = false;
+    private devModeAllowed: boolean = false;
+    private screenshotsAllowed: boolean = false;
 
     static getInstance(): AntiAccessProtection {
         if (!AntiAccessProtection.instance) {
@@ -17,11 +19,19 @@ export class AntiAccessProtection {
         if (this.protectionActive) return;
         this.protectionActive = true;
 
-        // 1. Disable DevTools (invisibrowse technique)
-        this.disableDevTools();
+        // Load settings from localStorage
+        this.devModeAllowed = localStorage.getItem('paper-dev-mode') === 'true';
+        this.screenshotsAllowed = localStorage.getItem('paper-screenshots') === 'true';
 
-        // 2. Prevent Screenshots (invisibrowse technique)
-        this.preventScreenshots();
+        // 1. Disable DevTools (invisibrowse technique) - only if not allowed
+        if (!this.devModeAllowed) {
+            this.disableDevTools();
+        }
+
+        // 2. Prevent Screenshots (invisibrowse technique) - only if not allowed
+        if (!this.screenshotsAllowed) {
+            this.preventScreenshots();
+        }
 
         // 3. Block Extension Access
         this.blockExtensions();
@@ -104,18 +114,22 @@ export class AntiAccessProtection {
         });
 
         // CSS to prevent selection
-        const style = document.createElement('style');
-        style.textContent = `
-            * {
-                -webkit-user-select: none !important;
-                -moz-user-select: none !important;
-                -ms-user-select: none !important;
-                user-select: none !important;
-                -webkit-touch-callout: none !important;
-                -webkit-tap-highlight-color: transparent !important;
-            }
-        `;
-        document.head.appendChild(style);
+        let style = document.getElementById('paper-no-select') as HTMLStyleElement;
+        if (!style) {
+            style = document.createElement('style');
+            style.id = 'paper-no-select';
+            style.textContent = `
+                * {
+                    -webkit-user-select: none !important;
+                    -moz-user-select: none !important;
+                    -ms-user-select: none !important;
+                    user-select: none !important;
+                    -webkit-touch-callout: none !important;
+                    -webkit-tap-highlight-color: transparent !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
 
         // Detect Print Screen
         document.addEventListener('keydown', (e) => {
@@ -180,6 +194,30 @@ export class AntiAccessProtection {
         // Block iframe embedding
         if (window.self !== window.top) {
             document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#000;color:#fff;font-family:monospace;"><h1>Framing Not Allowed</h1></div>';
+        }
+    }
+
+    allowDevMode(allowed: boolean) {
+        this.devModeAllowed = allowed;
+        if (allowed) {
+            // Remove dev mode blocking
+            console.log('[AntiAccess] Dev mode allowed');
+        } else {
+            this.disableDevTools();
+        }
+    }
+
+    allowScreenshots(allowed: boolean) {
+        this.screenshotsAllowed = allowed;
+        if (allowed) {
+            // Remove screenshot blocking
+            const style = document.getElementById('paper-no-select');
+            if (style) {
+                style.remove();
+            }
+            console.log('[AntiAccess] Screenshots allowed');
+        } else {
+            this.preventScreenshots();
         }
     }
 

@@ -19,12 +19,21 @@ export interface ResponseData {
 
 export const apps: VirtualApp[] = [
     {
+        domain: 'paper.paper',
+        name: 'Paper Dashboard',
+        description: 'Self-hosted dashboard - always accessible, cannot be blocked.',
+        handler: async (path) => {
+             // Delegate to Runtime (self-hosted)
+             return await runtime.handleRequest('paper.paper', path, 'self-hosted');
+        }
+    },
+    {
         domain: 'blog.paper',
         name: 'Dev Blog',
         description: 'A minimal markdown-ish blog engine running in BrowserPod.',
         handler: async (path) => {
              // Delegate to Runtime
-             return await runtime.handleRequest('blog.paper', path);
+             return await runtime.handleRequest('blog.paper', path, 'unknown');
         }
     },
     {
@@ -33,7 +42,7 @@ export const apps: VirtualApp[] = [
         description: 'An Apple-style e-commerce prototype running in BrowserPod.',
         handler: async (path) => {
              // Delegate to Runtime
-             return await runtime.handleRequest('shop.paper', path);
+             return await runtime.handleRequest('shop.paper', path, 'unknown');
         }
     }
 ];
