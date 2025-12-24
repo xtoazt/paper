@@ -5,9 +5,10 @@ import { ExternalLink, Layers, Plus } from 'lucide-react';
 interface AppGridProps {
     apps: VirtualApp[];
     onOpen: (domain: string) => void;
+    onImport?: () => void;
 }
 
-export const AppGrid: React.FC<AppGridProps> = ({ apps }) => {
+export const AppGrid: React.FC<AppGridProps> = ({ apps, onOpen, onImport }) => {
     return (
         <div style={{ 
             display: 'grid', 
@@ -41,40 +42,50 @@ export const AppGrid: React.FC<AppGridProps> = ({ apps }) => {
                         {app.description}
                     </p>
 
-                    <a 
-                        href={`http://${app.domain}:8080`} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
+                    <button
+                        onClick={() => onOpen(app.domain)}
                         className="btn"
-                        style={{ justifyContent: 'center', textDecoration: 'none' }}
+                        style={{ justifyContent: 'center', width: '100%' }}
                     >
                         <span>Open App</span>
                         <ExternalLink size={14} />
-                    </a>
+                    </button>
                 </div>
             ))}
 
             {/* Import Card */}
-            <div style={{
-                border: '1px dashed var(--border)',
-                borderRadius: '8px',
-                padding: '1.5rem',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                gap: '1rem',
-                color: 'var(--text-secondary)',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-            }} className="hover:bg-surface-hover">
+            <div 
+                onClick={onImport}
+                style={{
+                    border: '1px dashed var(--border)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '1.5rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    background: 'var(--bg-surface)'
+                }}
+                onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--bg-surface-hover)';
+                    e.currentTarget.style.borderColor = 'var(--border-light)';
+                }}
+                onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'var(--bg-surface)';
+                    e.currentTarget.style.borderColor = 'var(--border)';
+                }}
+            >
                 <div style={{ 
                     width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-surface-hover)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }}>
                     <Plus size={20} />
                 </div>
-                <span>New Project</span>
+                <span style={{ fontWeight: 500 }}>Import Repository</span>
             </div>
         </div>
     );

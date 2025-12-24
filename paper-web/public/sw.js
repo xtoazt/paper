@@ -101,9 +101,10 @@ async function handlePaperDomain(request, url) {
 async function handleGatewayRequest(request) {
     const url = new URL(request.url);
     const rawPath = url.pathname.replace(GATEWAY_PREFIX, '');
-    const parts = rawPath.split('/');
-    const domain = parts[0];
-    const path = '/' + parts.slice(1).join('/') + (url.search || '');
+    const parts = rawPath.split('/').filter(Boolean);
+    const domain = parts[0] || 'blog.paper';
+    const path = parts.length > 1 ? '/' + parts.slice(1).join('/') : '/';
+    const fullPath = path + (url.search || '');
 
     let client = await self.clients.get(request.clientId);
     if (!client) {
@@ -147,7 +148,7 @@ async function handleGatewayRequest(request) {
         client.postMessage({
             type: 'GATEWAY_REQUEST',
             domain,
-            path,
+            path: fullPath,
             method: request.method,
             headers: Object.fromEntries(request.headers.entries())
         }, [channel.port2]);

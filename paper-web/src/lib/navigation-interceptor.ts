@@ -13,15 +13,15 @@ export class NavigationInterceptor {
     }
 
     async init() {
-        // Strategy 1: Service Worker (primary)
+        // Strategy 1: Service Worker (primary) - Don't register here, App.tsx handles it
         if ('serviceWorker' in navigator) {
             try {
-                const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-                await navigator.serviceWorker.ready;
+                const reg = await navigator.serviceWorker.ready;
                 this.swReady = true;
-                console.log('[Interceptor] Service Worker Active');
+                console.log('[Interceptor] Service Worker Ready');
             } catch (e) {
-                console.error('[Interceptor] SW Failed:', e);
+                // SW might not be registered yet, that's OK
+                console.log('[Interceptor] Service Worker not ready yet');
             }
         }
 

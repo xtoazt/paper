@@ -1,5 +1,6 @@
-import { GitHubRepo } from './github';
+import { UniversalGitRepo } from './git-repo';
 import { InsaneCompression } from './compression';
+import { deploymentLogger } from './deployment-logs';
 
 // BrowserPod Runtime with PERSISTENCE
 export class BrowserPodRuntime {
@@ -68,68 +69,153 @@ export class BrowserPodRuntime {
     }
 
     async mountRepo(url: string) {
-        console.log(`[BrowserPod] Cloning ${url}...`);
-        const repo = new GitHubRepo(url);
-        await repo.initialize();
+        deploymentLogger.info(`Starting import from ${url}...`, undefined, url);
         
-        // Flatten repo into FS with INSANE compression & PERSISTENCE
-        const promises: Promise<void>[] = [];
-        
-        for (const [path, item] of Object.entries(repo.tree)) {
-            if (item.type === 'file') {
-                promises.push((async () => {
-                    const content = await repo.getFile(path);
-                    if (content) {
-                        // Compress
-                        const compressed = await InsaneCompression.compressAsync(content);
-                        // Save to FS & Persistent Storage
-                        await this.persistFile(path, compressed);
-                    }
-                })());
+        try {
+            const repo = new UniversalGitRepo(url);
+            deploymentLogger.info(`Detected ${repo.info.provider} repository`, `${repo.info.owner}/${repo.info.repo}@${repo.info.branch}`, url);
+            
+            await repo.initialize();
+            const stats = repo.getStats();
+            deploymentLogger.success(`Repository fetched`, `${stats.fileCount} files (${(stats.totalSize / 1024).toFixed(2)} KB)`, url);
+            
+            // Flatten repo into FS with INSANE compression & PERSISTENCE
+            const promises: Promise<void>[] = [];
+            let processed = 0;
+            
+            for (const [path, item] of Object.entries(repo.tree)) {
+                if (item.type === 'file') {
+                    promises.push((async () => {
+                        try {
+                            const content = await repo.getFile(path);
+                            if (content) {
+                                // Compress
+                                const compressed = await InsaneCompression.compressAsync(content);
+                                // Save to FS & Persistent Storage
+                                await this.persistFile(path, compressed);
+                                processed++;
+                                
+                                if (processed % 10 === 0) {
+                                    deploymentLogger.info(`Processing files...`, `${processed}/${stats.fileCount}`, url);
+                                }
+                            }
+                        } catch (e: any) {
+                            deploymentLogger.warning(`Failed to process ${path}`, e.message, url);
+                        }
+                    })());
+                }
             }
+            
+            await Promise.all(promises);
+            const domain = `${repo.info.repo.toLowerCase()}.paper`;
+            deploymentLogger.success(`Deployment complete`, `Mounted ${processed} files. Available at ${domain}`, url, domain);
+            
+            return domain;
+        } catch (e: any) {
+            deploymentLogger.error(`Failed to import repository`, e.message, url);
+            throw e;
         }
-        await Promise.all(promises);
-        console.log(`[BrowserPod] Mounted & Persisted ${this.fs.size} files.`);
     }
 
     async handleRequest(domain: string, path: string): Promise<{ status: number, headers: any, body: string }> {
         if (!this.isReady) await this.boot();
+
+        // Normalize path
+        if (!path.startsWith('/')) path = '/' + path;
 
         // 1. Built-in Logic
         if (domain === 'blog.paper') return this.runBlogApp(path);
         if (domain === 'shop.paper') return this.runShopApp(path);
 
         // 2. Static File Serving from Persistent FS
+        // Try exact path first
         let contentBytes = this.fs.get(path);
         let servedPath = path;
 
+        // Try index.html for directories
         if (!contentBytes && (path === '/' || path.endsWith('/'))) {
             contentBytes = this.fs.get(path + 'index.html');
-            if (!contentBytes) contentBytes = this.fs.get('/index.html'); 
+            if (!contentBytes) contentBytes = this.fs.get('/index.html');
+            if (contentBytes) servedPath = path + 'index.html';
+        }
+
+        // Try without leading slash
+        if (!contentBytes && path.startsWith('/')) {
+            contentBytes = this.fs.get(path.slice(1));
+            if (contentBytes) servedPath = path.slice(1);
         }
 
         if (contentBytes) {
-            const content = await InsaneCompression.decompressAsync(contentBytes);
-            return {
-                status: 200,
-                headers: { 'Content-Type': this.getMimeType(servedPath) },
-                body: content
-            };
+            try {
+                const content = await InsaneCompression.decompressAsync(contentBytes);
+                return {
+                    status: 200,
+                    headers: { 
+                        'Content-Type': this.getMimeType(servedPath),
+                        'Cache-Control': 'no-cache'
+                    },
+                    body: content
+                };
+            } catch (e: any) {
+                console.error(`[Runtime] Failed to decompress ${servedPath}:`, e);
+                return {
+                    status: 500,
+                    headers: { 'Content-Type': 'text/html' },
+                    body: `<h1>500 Internal Error</h1><p>Failed to decompress file: ${e.message}</p>`
+                };
+            }
         }
 
+        // 404 with helpful message
         return {
             status: 404,
             headers: { 'Content-Type': 'text/html' },
-            body: `<h1>404 Not Found</h1><p>BrowserPod: No route for ${path}</p>`
+            body: `<!DOCTYPE html>
+<html>
+<head>
+    <title>404 - Not Found</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; padding: 2rem; background: #000; color: #fff; text-align: center; }
+        h1 { color: #ff0000; }
+        code { background: #1a1a1a; padding: 0.25rem 0.5rem; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>404 - Not Found</h1>
+    <p>Domain: <code>${domain}</code></p>
+    <p>Path: <code>${path}</code></p>
+    <p style="color: #888; margin-top: 2rem;">No file found at this location.</p>
+</body>
+</html>`
         };
     }
 
     private getMimeType(path: string) {
-        if (path.endsWith('.html')) return 'text/html';
-        if (path.endsWith('.js')) return 'application/javascript';
-        if (path.endsWith('.css')) return 'text/css';
-        if (path.endsWith('.json')) return 'application/json';
-        return 'text/plain';
+        const ext = path.split('.').pop()?.toLowerCase();
+        const mimeTypes: Record<string, string> = {
+            'html': 'text/html',
+            'htm': 'text/html',
+            'js': 'application/javascript',
+            'mjs': 'application/javascript',
+            'css': 'text/css',
+            'json': 'application/json',
+            'png': 'image/png',
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'gif': 'image/gif',
+            'svg': 'image/svg+xml',
+            'webp': 'image/webp',
+            'ico': 'image/x-icon',
+            'woff': 'font/woff',
+            'woff2': 'font/woff2',
+            'ttf': 'font/ttf',
+            'otf': 'font/otf',
+            'xml': 'application/xml',
+            'txt': 'text/plain',
+            'md': 'text/markdown',
+            'pdf': 'application/pdf'
+        };
+        return mimeTypes[ext || ''] || 'application/octet-stream';
     }
 
     // --- Mock Apps ---

@@ -1,4 +1,5 @@
 import { runtime } from './runtime';
+import { deploymentLogger } from './deployment-logs';
 
 export interface VirtualApp {
     domain: string;
@@ -49,15 +50,15 @@ export const registerApp = (app: VirtualApp) => {
 };
 
 export const createRepoApp = async (repoUrl: string): Promise<VirtualApp> => {
-    // 1. Mount to Runtime
-    await runtime.mountRepo(repoUrl);
+    // 1. Mount to Runtime (logs are handled inside mountRepo)
+    const domain = await runtime.mountRepo(repoUrl);
     
     // 2. Create App Definition that delegates to Runtime
-    const domain = `${repoUrl.split('/')[1].toLowerCase()}.paper`;
+    const repoName = repoUrl.split('/').pop()?.replace('.git', '') || 'repo';
 
     return {
         domain,
-        name: repoUrl,
+        name: repoName,
         description: `Live preview of ${repoUrl}`,
         handler: async (path) => {
             return await runtime.handleRequest(domain, path);

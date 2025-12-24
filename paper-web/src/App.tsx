@@ -7,8 +7,10 @@ import { FileExplorer } from './components/ui/FileExplorer';
 import { WebVMTerminal } from './components/ui/WebVMTerminal';
 import { VMStatus } from './components/ui/VMStatus';
 import { SecurityDashboard } from './components/ui/SecurityDashboard';
+import { DeploymentLogsView } from './components/ui/DeploymentLogsView';
+import { ImportModal } from './components/ui/ImportModal';
 import { firewall } from './lib/firewall';
-import { apps } from './lib/registry';
+import { apps, registerApp } from './lib/registry';
 import { runtime } from './lib/runtime';
 import { NavigationInterceptor } from './lib/navigation-interceptor';
 import { antiAccess } from './lib/anti-access';
@@ -27,6 +29,8 @@ function App() {
   const [connected, setConnected] = useState(false);
   const [view, setView] = useState('overview');
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [appsList, setAppsList] = useState(apps);
   const ws = useRef<WebSocket | null>(null);
 
   // AUTO-BOOT: Service Worker + Navigation Interceptor + Anti-Access
@@ -193,15 +197,20 @@ function App() {
                 <LogsView logs={logs} />
             ) : view === 'files' ? (
                 <FileExplorer />
+            ) : view === 'deployments' ? (
+                <DeploymentLogsView />
             ) : view === 'security' ? (
                 <SecurityDashboard />
             ) : (
                 <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
                     <div className="flex justify-between items-center">
-                        <h1 style={{ fontSize: '1.8rem', fontWeight: 600, margin: 0 }}>Overview</h1>
-                        <button className="btn btn-primary">
+                        <h1 style={{ fontSize: '2rem', fontWeight: 600, margin: 0, letterSpacing: '-0.02em' }}>Overview</h1>
+                        <button 
+                            className="btn btn-primary"
+                            onClick={() => setShowImportModal(true)}
+                        >
                             <Plus size={16} />
-                            <span>New Project</span>
+                            <span>Import Repository</span>
                         </button>
                     </div>
                     
@@ -215,15 +224,33 @@ function App() {
                         Service Worker + DNS VM intercepts all requests automatically.
                     </div>
                     
-                    <AppGrid apps={apps} onOpen={(domain) => {
+                    <AppGrid apps={appsList} onOpen={(domain) => {
                         // Open REAL .paper URL - Service Worker intercepts before DNS
                         // This works because SW can intercept navigation
-                        window.open(`http://${domain}`, '_blank');
-                    }} />
+                        // Use window.location for same-tab or window.open for new tab
+                        const url = `http://${domain}`;
+                        // Try to open in new tab, fallback to same tab
+                        const newWindow = window.open(url, '_blank');
+                        if (!newWindow) {
+                            // Popup blocked, use same window
+                            window.location.href = url;
+                        }
+                    }} onImport={() => setShowImportModal(true)} />
                 </div>
             )}
         </main>
       </div>
+      
+      {showImportModal && (
+        <ImportModal
+          onClose={() => setShowImportModal(false)}
+          onImport={() => {
+            // Refresh apps list
+            setAppsList([...apps]);
+            setShowImportModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }
