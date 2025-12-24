@@ -2,7 +2,7 @@
 // Modern, clean, professional design
 
 import { useState } from 'react';
-import { Plus, X, Loader } from 'lucide-react';
+import { X, Loader } from 'lucide-react';
 import { createRepoApp, registerApp } from '../../lib/registry';
 import { deploymentLogger } from '../../lib/deployment-logs';
 

@@ -1,5 +1,4 @@
 import { runtime } from './runtime';
-import { deploymentLogger } from './deployment-logs';
 
 export interface VirtualApp {
     domain: string;

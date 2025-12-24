@@ -3,8 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { ShieldCheck, AlertTriangle, Activity, Lock, EyeOff } from 'lucide-react';
-import { firewall } from '../lib/firewall';
-import { antiAccess } from '../lib/anti-access';
+import { firewall } from '../../lib/firewall';
 
 interface SecurityEvent {
     timestamp: Date;
@@ -208,7 +207,7 @@ export const SecurityDashboard = () => {
                 <h2 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '1rem' }}>Security Technology Credits</h2>
                 <div style={{ background: '#111', border: '1px solid #333', borderRadius: '8px', padding: '1.5rem' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        {credits.map((credit, i) => (
+                        {credits.map((credit: string, i: number) => (
                             <div key={i} style={{ 
                                 padding: '1rem', 
                                 background: '#1a1a1a', 

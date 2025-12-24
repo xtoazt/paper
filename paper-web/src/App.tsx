@@ -10,7 +10,7 @@ import { SecurityDashboard } from './components/ui/SecurityDashboard';
 import { DeploymentLogsView } from './components/ui/DeploymentLogsView';
 import { ImportModal } from './components/ui/ImportModal';
 import { firewall } from './lib/firewall';
-import { apps, registerApp } from './lib/registry';
+import { apps } from './lib/registry';
 import { runtime } from './lib/runtime';
 import { NavigationInterceptor } from './lib/navigation-interceptor';
 import { antiAccess } from './lib/anti-access';

@@ -2,11 +2,8 @@
 // Uses aggressive browser APIs to intercept navigation
 
 export class PaperDNSVM {
-    private emulator: any = null;
     private ready: boolean = false;
     private container: HTMLDivElement | null = null;
-    private dnsServer: any = null;
-    private vmIP: string = '10.0.2.15'; // Default v86 VM IP
 
     constructor() {
         // Create hidden container (only when needed)

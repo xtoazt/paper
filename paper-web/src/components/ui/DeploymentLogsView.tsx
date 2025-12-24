@@ -2,7 +2,7 @@
 // Vercel-style deployment logs
 
 import { useState, useEffect, useRef } from 'react';
-import { CheckCircle, XCircle, AlertCircle, Info, Loader } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, Info } from 'lucide-react';
 import { deploymentLogger, DeploymentLog } from '../../lib/deployment-logs';
 
 export const DeploymentLogsView = () => {
@@ -21,7 +21,9 @@ export const DeploymentLogsView = () => {
             setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
         });
 
-        return unsubscribe;
+        return () => {
+            unsubscribe();
+        };
     }, []);
 
     const filteredLogs = filter === 'all' ? logs : logs.filter(log => log.level === filter);

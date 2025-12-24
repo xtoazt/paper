@@ -16,7 +16,7 @@ export class NavigationInterceptor {
         // Strategy 1: Service Worker (primary) - Don't register here, App.tsx handles it
         if ('serviceWorker' in navigator) {
             try {
-                const reg = await navigator.serviceWorker.ready;
+                await navigator.serviceWorker.ready;
                 this.swReady = true;
                 console.log('[Interceptor] Service Worker Ready');
             } catch (e) {
@@ -121,7 +121,7 @@ export class NavigationInterceptor {
         
         // Try to use Service Worker navigation
         if (this.swReady && 'serviceWorker' in navigator) {
-            navigator.serviceWorker.ready.then(reg => {
+            navigator.serviceWorker.ready.then(() => {
                 // Use navigation API if available
                 if ('navigation' in window) {
                     (window as any).navigation.navigate(gatewayUrl);

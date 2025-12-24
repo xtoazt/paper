@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { dnsVM } from '../lib/v86-dns';
+import { dnsVM } from '../../lib/v86-dns';
 import { CheckCircle, Loader } from 'lucide-react';
 
 export const VMStatus = () => {

@@ -138,9 +138,9 @@ export class AntiAccessProtection {
             }
 
             // Check for modified window properties
-            if (window.chrome && window.chrome.runtime) {
+            if ((window as any).chrome && (window as any).chrome.runtime) {
                 // Chrome extension detected
-                const extId = (window.chrome.runtime as any).id;
+                const extId = ((window as any).chrome.runtime as any).id;
                 if (extId && !extId.includes('paper')) {
                     console.warn('[AntiAccess] Unauthorized extension detected');
                 }

@@ -20,8 +20,6 @@ export class PaperFirewall {
     private rules: FirewallRule[] = [];
     private rateLimits: Map<string, number[]> = new Map();
     private blockedIPs: Set<string> = new Set();
-    private botFingerprints: Map<string, BotDetection> = new Map();
-    private challengeTokens: Map<string, number> = new Map();
     private dynamicProtection: boolean = true;
 
     constructor() {
@@ -166,7 +164,7 @@ export class PaperFirewall {
     }
 
     // Check if request should be blocked (SafeLine-style)
-    checkRequest(domain: string, path: string, headers: Record<string, string>, method: string): { allowed: boolean, reason?: string, severity?: string, challenge?: boolean } {
+    checkRequest(_domain: string, path: string, headers: Record<string, string>, method: string): { allowed: boolean, reason?: string, severity?: string, challenge?: boolean } {
         const clientIP = headers['x-forwarded-for'] || headers['x-real-ip'] || 'unknown';
         const userAgent = headers['user-agent'] || '';
         
@@ -221,7 +219,6 @@ export class PaperFirewall {
         // Check for missing or suspicious headers
         const hasAccept = !!headers['accept'];
         const hasAcceptLanguage = !!headers['accept-language'];
-        const hasReferer = !!headers['referer'];
         
         const suspicious = !hasAccept || (!hasAcceptLanguage && !isBot);
 
