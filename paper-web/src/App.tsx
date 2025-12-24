@@ -4,10 +4,11 @@ import { Header } from './components/layout/Header';
 import { AppGrid } from './components/ui/AppGrid';
 import { SetupCard } from './components/ui/SetupCard';
 import { LogsView, LogEntry } from './components/ui/LogsView';
+import { FileExplorer } from './components/ui/FileExplorer';
 import { AppRenderer } from './components/ui/AppRenderer';
 import { apps } from './lib/registry';
 import { runtime } from './lib/runtime';
-import { Plus, CheckCircle } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 interface RequestPayload {
   id: string;
@@ -126,6 +127,8 @@ function App() {
                 </div>
             ) : view === 'logs' ? (
                 <LogsView logs={logs} />
+            ) : view === 'files' ? (
+                <FileExplorer />
             ) : (
                 <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
                     <div className="flex justify-between items-center">

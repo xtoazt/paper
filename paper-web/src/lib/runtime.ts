@@ -17,6 +17,11 @@ export class BrowserPodRuntime {
         this.isReady = true;
     }
 
+    // List files for Explorer
+    listFiles(): string[] {
+        return Array.from(this.fs.keys());
+    }
+
     // Mount a GitHub repo into the virtual filesystem
     async mountRepo(url: string) {
         console.log(`[BrowserPod] Cloning ${url}...`);
@@ -160,4 +165,3 @@ export class BrowserPodRuntime {
 
 // Singleton Instance
 export const runtime = new BrowserPodRuntime();
-

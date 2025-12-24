@@ -1,4 +1,4 @@
-import { Home, Box, Globe, Settings, Activity, FileText } from 'lucide-react';
+import { Home, Activity, FileText, HardDrive } from 'lucide-react';
 
 interface SidebarProps {
     currentView: string;
@@ -33,6 +33,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
                     label="Overview" 
                     active={currentView === 'overview'} 
                     onClick={() => onNavigate('overview')}
+                />
+                <NavItem 
+                    icon={<HardDrive size={18} />} 
+                    label="Storage" 
+                    active={currentView === 'files'} 
+                    onClick={() => onNavigate('files')}
                 />
 
                 <div className="text-xs text-secondary" style={{ marginTop: '2rem', marginBottom: '0.5rem', paddingLeft: '0.5rem' }}>SYSTEM</div>

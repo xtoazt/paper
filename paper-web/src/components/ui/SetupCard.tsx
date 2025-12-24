@@ -1,5 +1,4 @@
-import React from 'react';
-import { Cloud, Terminal, CheckCircle, AlertCircle, Shield } from 'lucide-react';
+import { Cloud, AlertCircle, Shield } from 'lucide-react';
 
 const SCRIPT_URL = "https://rohan.github.io/paper/scripts/install.sh";
 

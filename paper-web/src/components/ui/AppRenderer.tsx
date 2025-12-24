@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 
 interface AppRendererProps {
@@ -78,7 +78,10 @@ export const AppRenderer: React.FC<AppRendererProps> = ({ domain, onClose }) => 
                     background: '#fff' // Prevent flash
                 }}
                 title={domain}
+                // Incredible Security: Strict Sandboxing
                 sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+                referrerPolicy="no-referrer"
+                credentialless="true"
             />
         </div>
     );
