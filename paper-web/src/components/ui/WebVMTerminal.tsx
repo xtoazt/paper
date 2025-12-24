@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Terminal as TerminalIcon, Minimize2, Maximize2 } from 'lucide-react';
+import { Terminal as TerminalIcon, Minimize2 } from 'lucide-react';
 import { runtime } from '../../lib/runtime';
 
 export const WebVMTerminal = () => {
