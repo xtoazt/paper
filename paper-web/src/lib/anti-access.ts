@@ -72,8 +72,12 @@ export class AntiAccessProtection {
         
         setInterval(() => {
             devtools.open = false;
-            console.clear();
-            console.log('%c', element);
+            try {
+                console.clear();
+                console.log('%c', element);
+            } catch (e) {
+                // Ignore console errors
+            }
             if (devtools.open) {
                 document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#000;color:#fff;font-family:monospace;"><h1>Access Denied</h1></div>';
             }
