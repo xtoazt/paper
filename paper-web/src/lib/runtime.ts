@@ -1,9 +1,10 @@
 import { GitHubRepo } from './github';
+import { InsaneCompression } from './compression';
 
 // This simulates the BrowserPod / CheerpX Runtime Interface
 // In a full implementation, this would load the WASM blobs and boot Node.js
 export class BrowserPodRuntime {
-    private fs: Map<string, string> = new Map();
+    private fs: Map<string, Uint8Array> = new Map(); // Store COMPRESSED binary data
     public isReady: boolean = false;
 
     constructor() {
@@ -28,14 +29,17 @@ export class BrowserPodRuntime {
         const repo = new GitHubRepo(url);
         await repo.initialize();
         
-        // Flatten repo into FS
+        // Flatten repo into FS with INSANE compression
         for (const [path, item] of Object.entries(repo.tree)) {
             if (item.type === 'file') {
                 const content = await repo.getFile(path);
-                if (content) this.fs.set(path, content);
+                if (content) {
+                    const compressed = await InsaneCompression.compressAsync(content);
+                    this.fs.set(path, compressed);
+                }
             }
         }
-        console.log(`[BrowserPod] Mounted ${this.fs.size} files.`);
+        console.log(`[BrowserPod] Mounted ${this.fs.size} files (Compressed).`);
     }
 
     // Simulate handling a request via the internal Node.js server
@@ -54,16 +58,18 @@ export class BrowserPodRuntime {
         // Simulate: app.use(express.static('.'))
         
         // Try exact match
-        let content = this.fs.get(path);
+        let contentBytes = this.fs.get(path);
         let servedPath = path;
 
         // Try index.html
-        if (!content && (path === '/' || path.endsWith('/'))) {
-            content = this.fs.get(path + 'index.html');
-            if (!content) content = this.fs.get('/index.html'); 
+        if (!contentBytes && (path === '/' || path.endsWith('/'))) {
+            contentBytes = this.fs.get(path + 'index.html');
+            if (!contentBytes) contentBytes = this.fs.get('/index.html'); 
         }
 
-        if (content) {
+        if (contentBytes) {
+            // Decompress on the fly
+            const content = await InsaneCompression.decompressAsync(contentBytes);
             return {
                 status: 200,
                 headers: { 'Content-Type': this.getMimeType(servedPath) },

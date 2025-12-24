@@ -81,7 +81,7 @@ export const AppRenderer: React.FC<AppRendererProps> = ({ domain, onClose }) => 
                 // Incredible Security: Strict Sandboxing
                 sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
                 referrerPolicy="no-referrer"
-                credentialless="true"
+                {...{ credentialless: "true" } as any}
             />
         </div>
     );
