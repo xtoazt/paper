@@ -62,7 +62,7 @@ export class PaperFirewall {
         // OS Command Injection (SafeLine)
         this.rules.push({
             name: 'OS Command Injection (SafeLine)',
-            pattern: /(;|\||&&|`|\$\(|%3b|%7c|%26%26|cmd\.exe|/bin/sh|/bin/bash|powershell|wscript|cscript)/i,
+            pattern: /(;|\||&&|`|\$\(|%3b|%7c|%26%26|cmd\.exe|\/bin\/sh|\/bin\/bash|powershell|wscript|cscript)/i,
             action: 'block',
             severity: 'critical',
             source: 'safeline'
@@ -140,7 +140,7 @@ export class PaperFirewall {
         // Path Traversal
         this.rules.push({
             name: 'Path Traversal',
-            pattern: /\.\.\/|\.\.\\|\.\.%2f|\.\.%5c|\.\.%252f|\.\.%255c|\.\.%c0%af|\.\.%c1%9c/i,
+            pattern: /(\.\.\/|\.\.\\|\.\.%2f|\.\.%5c|\.\.%252f|\.\.%255c|\.\.%c0%af|\.\.%c1%9c)/i,
             action: 'block',
             severity: 'high',
             source: 'paper'
