@@ -231,7 +231,11 @@ js_bridge = JSBridge()
         };
 
         // Create firewall
-        const firewallCode = String.raw`
+        // Build regex pattern with backtick separately to avoid template literal issues
+        const backtickChar = String.fromCharCode(96);
+        const commandInjectionPattern = '[;&|' + backtickChar + '$(){}[\\\\]]';
+        
+        const firewallCodeBefore = String.raw`
 import re
 import time
 from collections import defaultdict
@@ -260,7 +264,36 @@ class UnbreakableFirewall:
                 re.compile(r'(?i)eval\\s*\\('),
             ],
             'command_injection': [
-                re.compile(r'[;&|\\`$(){}[\\]]'),
+                re.compile(r'[;&|__BACKTICK_PLACEHOLDER__$(){}[\\]]'),
+        
+        const firewallCodeAfter = String.raw`
+                re.compile(r'(?i)\\b(cmd|command|sh|bash|powershell|exec|system|popen|shell_exec)\\b'),
+                re.compile(r'(?i)(/\\w+/(bin|usr|etc)/\\w+)'),
+            ],
+    def __init__(self):
+        self.active = True
+        self.blocked_ips = set()
+        self.allowed_ips = set()
+        self.rate_limits = defaultdict(list)
+        self.attack_patterns = self._init_patterns()
+        self.request_history = defaultdict(list)
+    
+    def _init_patterns(self):
+        return {
+            'sql_injection': [
+                re.compile(r'(?i)\\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|EXECUTE|UNION|SCRIPT)\\b'),
+                re.compile(r'(?i)\\b(OR|AND)\\s+\\d+\\s*=\\s*\\d+'),
+                re.compile(r'(?i)(xp_cmdshell|sp_executesql|CONCAT|GROUP_CONCAT)'),
+                re.compile(r'[;\\'\\\\]'),
+            ],
+            'xss': [
+                re.compile(r'(?i)<script[^>]*>.*?</script>'),
+                re.compile(r'(?i)javascript:'),
+                re.compile(r'(?i)on\\w+\\s*='),
+                re.compile(r'(?i)eval\\s*\\('),
+            ],
+            'command_injection': [
+                re.compile(r'[;&|` + backtickChar + r`$(){}[\\]]'),
                 re.compile(r'(?i)\\b(cmd|command|sh|bash|powershell|exec|system|popen|shell_exec)\\b'),
                 re.compile(r'(?i)(/\\w+/(bin|usr|etc)/\\w+)'),
             ],
@@ -371,6 +404,8 @@ class UnbreakableFirewall:
 
 firewall = UnbreakableFirewall()
         `;
+        
+        const firewallCode = (firewallCodeBefore + firewallCodeAfter).replace('__BACKTICK_PLACEHOLDER__', String.fromCharCode(96));
 
         this.pyodide.runPython(firewallCode);
     }
