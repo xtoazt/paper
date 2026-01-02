@@ -35,9 +35,21 @@ export const DomainManager = () => {
         }
     };
 
-    const loadDomains = () => {
-        const loadedDomains = pyodideProxyServer.getDomains();
-        setDomains(loadedDomains.filter(d => d.endsWith('.paper') || d === 'paper'));
+    const loadDomains = async () => {
+        try {
+            // Ensure server is initialized
+            if (!pyodideProxyServer.isInitialized()) {
+                await pyodideProxyServer.initialize();
+            }
+            const loadedDomains = pyodideProxyServer.getDomains();
+            // Filter to show only .paper domains, excluding www variants for cleaner UI
+            const filtered = loadedDomains.filter(d => 
+                (d.endsWith('.paper') || d === 'paper') && !d.startsWith('www.')
+            );
+            setDomains(filtered);
+        } catch (error: any) {
+            console.error('[DomainManager] Failed to load domains:', error);
+        }
     };
 
     const validateDomain = (domain: string): string | null => {

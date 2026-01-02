@@ -87,6 +87,10 @@ self.addEventListener('activate', async (event) => {
 self.addEventListener('message', async (event) => {
     if (event.data && event.data.type === 'DOMAIN_REGISTERED') {
         registeredDomains.add(event.data.domain);
+        // Also add www variant
+        if (!event.data.domain.startsWith('www.')) {
+            registeredDomains.add(`www.${event.data.domain}`);
+        }
         await persistDomains();
         console.log('[SW] Domain registered:', event.data.domain);
     } else if (event.data && event.data.type === 'TLD_REGISTERED') {
@@ -94,6 +98,18 @@ self.addEventListener('message', async (event) => {
         registeredDomains.add(event.data.tld);
         await persistDomains();
         console.log('[SW] TLD registered:', event.data.tld);
+    } else if (event.data && event.data.type === 'DOMAIN_REMOVED') {
+        registeredDomains.delete(event.data.domain);
+        // Also remove www variant
+        if (event.data.domain.startsWith('www.')) {
+            registeredDomains.delete(event.data.domain.substring(4));
+        } else {
+            registeredDomains.delete(`www.${event.data.domain}`);
+        }
+        // Check if it was a TLD
+        registeredTLDs.delete(event.data.domain);
+        await persistDomains();
+        console.log('[SW] Domain removed:', event.data.domain);
     }
 });
 

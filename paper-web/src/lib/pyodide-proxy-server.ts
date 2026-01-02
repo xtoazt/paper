@@ -70,8 +70,12 @@ export class PyodideProxyServer {
             // Set up Python environment
             await this.setupPythonEnvironment();
 
-            // Load persisted domains
-            await this.loadDomainsFromIndexedDB();
+            // Load persisted domains and sync to Python
+            const data = await this.loadDomainsFromIndexedDB();
+            if (data.domains.length > 0 || data.tlds.length > 0) {
+                this.domains = new Set(data.domains);
+                this.tlds = new Set(data.tlds);
+            }
 
             console.log('[PyodideProxy] Pyodide ready');
         } catch (error: any) {
@@ -156,8 +160,29 @@ class HostsManager:
         self.domains.discard(domain)
         self.virtual_hosts.pop(domain, None)
         
-        # Save to IndexedDB via JS bridge
+        # Also remove www variant if it exists
+        if domain.startswith("www."):
+            original_domain = domain[4:]
+            self.domains.discard(original_domain)
+            self.virtual_hosts.pop(original_domain, None)
+        else:
+            www_domain = f"www.{domain}"
+            self.domains.discard(www_domain)
+            self.virtual_hosts.pop(www_domain, None)
+        
+        # Check if it was a TLD and remove if no other domains use it
+        is_tld = False
+        for tld in list(self.tlds):
+            if domain.endswith('.' + tld) or domain == tld:
+                is_tld = True
+                break
+        
+        if is_tld:
+            self.tlds.discard(domain)  # Remove if it was a TLD itself
+        
+        # Save to IndexedDB and notify Service Worker via JS bridge
         js_bridge.save_domains(list(self.domains), list(self.tlds))
+        js_bridge.notify_service_worker(domain, False)
     
     def get_domains(self):
         """Get all registered domains"""
@@ -329,6 +354,7 @@ class UnbreakableFirewall:
             return rate_check
         
         # Combine inputs for pattern matching
+        import json
         all_inputs = f"{method} {path} {json.dumps(headers or {})} {body}".lower()
         
         # Check attack patterns
@@ -597,12 +623,33 @@ for tld in tlds_list:
             this.domains = new Set(data.domains);
             this.tlds = new Set(data.tlds);
             
-            // Notify Service Worker of all domains
+            // Notify Service Worker of all domains (but don't persist again - already persisted)
+            // Just update the in-memory sets in Service Worker
             for (const domain of data.domains) {
-                this.notifyServiceWorker(domain, false);
+                if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({
+                        type: 'DOMAIN_REGISTERED',
+                        domain: domain
+                    });
+                }
             }
             for (const tld of data.tlds) {
-                this.notifyServiceWorker(tld, true);
+                if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({
+                        type: 'TLD_REGISTERED',
+                        tld: tld
+                    });
+                }
+            }
+        } else {
+            // No persisted domains, register defaults
+            const defaultDomains = ['paper', 'blog.paper', 'shop.paper', 'test.paper'];
+            for (const domain of defaultDomains) {
+                try {
+                    await this.registerDomain(domain);
+                } catch (error) {
+                    console.warn(`[PyodideProxy] Failed to register default domain ${domain}:`, error);
+                }
             }
         }
     }
@@ -697,6 +744,10 @@ for tld in tlds_list:
         if (!this.pyodide) {
             // Fallback: register in JS only
             this.domains.add(domain);
+            // Also add www variant
+            if (!domain.startsWith('www.')) {
+                this.domains.add(`www.${domain}`);
+            }
             await this.saveDomainsToIndexedDB(Array.from(this.domains), Array.from(this.tlds));
             this.notifyServiceWorker(domain, false);
             return { type: 'domain_registered', domain, was_new: true, all_domains: Array.from(this.domains) };
@@ -741,6 +792,9 @@ result = proxy_server.register_tld(` + tldJson + `)
         const parsed = JSON.parse(result);
         if (parsed.tld) {
             this.tlds.add(parsed.tld);
+            this.domains.add(parsed.tld);
+            // Update local sets and save
+            await this.saveDomainsToIndexedDB(Array.from(this.domains), Array.from(this.tlds));
         }
         return parsed;
     }
@@ -865,16 +919,35 @@ result = proxy_server.get_stats()`);
             await this.initialize();
         }
         
+        // Remove from local sets first
         this.domains.delete(domain);
-        await this.saveDomainsToIndexedDB(Array.from(this.domains), Array.from(this.tlds));
+        // Also remove www variant
+        if (domain.startsWith('www.')) {
+            this.domains.delete(domain.substring(4));
+        } else {
+            this.domains.delete(`www.${domain}`);
+        }
         
+        // Remove from Python if available
         if (this.pyodide) {
             try {
-                const escapedDomain = domain.replace(/"/g, '\\"').replace(/\$/g, '\\$');
-                this.pyodide.runPython(`hosts_manager.remove_domain("${escapedDomain}")`);
+                const domainJson = JSON.stringify(domain);
+                this.pyodide.runPython(String.raw`hosts_manager.remove_domain(` + domainJson + `)`);
             } catch (error) {
                 console.error('[PyodideProxy] Failed to remove domain from Python:', error);
             }
+        }
+        
+        // Save to IndexedDB and notify Service Worker
+        await this.saveDomainsToIndexedDB(Array.from(this.domains), Array.from(this.tlds));
+        this.notifyServiceWorker(domain, false);
+        
+        // Also notify Service Worker of removal
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+                type: 'DOMAIN_REMOVED',
+                domain: domain
+            });
         }
     }
 
