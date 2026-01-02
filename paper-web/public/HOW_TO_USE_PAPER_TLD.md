@@ -60,3 +60,6 @@ Browsers perform DNS resolution **before** Service Workers can intercept navigat
 
 For address bar navigation in a NEW tab, the Service Worker must already be registered from a previous visit.
 
+
+
+

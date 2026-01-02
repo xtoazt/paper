@@ -5,26 +5,16 @@ const CACHE_NAME = 'paper-dns-v4';
 const GATEWAY_PREFIX = '/_gateway/';
 
 // Immediate registration and takeover
-self.addEventListener('install', (event: ExtendableEvent) => {
+self.addEventListener('install', (event) => {
     self.skipWaiting(); // Take control immediately
     event.waitUntil(self.skipWaiting());
 });
 
-self.addEventListener('activate', (event: ExtendableEvent) => {
-    event.waitUntil(
-        Promise.all([
-            self.clients.claim(), // Control all tabs immediately
-            // Clear old caches
-            caches.keys().then(keys => Promise.all(
-                keys.map(key => key !== CACHE_NAME ? caches.delete(key) : Promise.resolve())
-            ))
-        ])
-    );
-});
+// activate handler moved below to include loadPersistedDomains
 
 // CRITICAL: Intercept navigation BEFORE DNS (Chrome/Edge experimental API)
 if ('navigation' in self) {
-    self.addEventListener('navigate', (event: any) => {
+    self.addEventListener('navigate', (event) => {
         try {
             const url = new URL(event.destination.url);
             if (url.hostname.endsWith('.paper') || url.hostname === 'paper') {
@@ -41,12 +31,122 @@ if ('navigation' in self) {
     });
 }
 
+// Registered domains (updated via messages)
+let registeredDomains = new Set(['paper', 'blog.paper', 'shop.paper', 'test.paper']);
+let registeredTLDs = new Set(['paper']);
+
+// Load persisted domains on activation
+async function loadPersistedDomains() {
+    try {
+        const db = await new Promise((resolve, reject) => {
+            const request = indexedDB.open('paper-proxy-db', 1);
+            request.onupgradeneeded = (e) => {
+                const db = (e.target as IDBOpenDBRequest).result;
+                if (!db.objectStoreNames.contains('domains')) {
+                    db.createObjectStore('domains');
+                }
+            };
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+        
+        const tx = (db as IDBDatabase).transaction('domains', 'readonly');
+        const store = tx.objectStore('domains');
+        const data = await new Promise((resolve, reject) => {
+            const request = store.get('registered');
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+        
+        if (data && (data as any).domains) {
+            registeredDomains = new Set((data as any).domains);
+            if ((data as any).tlds) {
+                registeredTLDs = new Set((data as any).tlds);
+            }
+            console.log('[SW] Loaded persisted domains:', Array.from(registeredDomains));
+        }
+    } catch (error) {
+        console.warn('[SW] Failed to load persisted domains:', error);
+    }
+}
+
+// Load on activation
+self.addEventListener('activate', async (event) => {
+    event.waitUntil(
+        Promise.all([
+            self.clients.claim(),
+            loadPersistedDomains(),
+            caches.keys().then(keys => Promise.all(
+                keys.map(key => key !== CACHE_NAME ? caches.delete(key) : Promise.resolve())
+            ))
+        ])
+    );
+});
+
+// Listen for domain registration messages
+self.addEventListener('message', async (event) => {
+    if (event.data && event.data.type === 'DOMAIN_REGISTERED') {
+        registeredDomains.add(event.data.domain);
+        await persistDomains();
+        console.log('[SW] Domain registered:', event.data.domain);
+    } else if (event.data && event.data.type === 'TLD_REGISTERED') {
+        registeredTLDs.add(event.data.tld);
+        registeredDomains.add(event.data.tld);
+        await persistDomains();
+        console.log('[SW] TLD registered:', event.data.tld);
+    }
+});
+
+// Persist domains to IndexedDB
+async function persistDomains() {
+    try {
+        const db = await new Promise((resolve, reject) => {
+            const request = indexedDB.open('paper-proxy-db', 1);
+            request.onupgradeneeded = (e) => {
+                const db = (e.target as IDBOpenDBRequest).result;
+                if (!db.objectStoreNames.contains('domains')) {
+                    db.createObjectStore('domains');
+                }
+            };
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+        
+        const tx = (db as IDBDatabase).transaction('domains', 'readwrite');
+        const store = tx.objectStore('domains');
+        await new Promise((resolve, reject) => {
+            const request = store.put({
+                domains: Array.from(registeredDomains),
+                tlds: Array.from(registeredTLDs)
+            }, 'registered');
+            request.onsuccess = () => resolve(undefined);
+            request.onerror = () => reject(request.error);
+        });
+    } catch (error) {
+        console.warn('[SW] Failed to persist domains:', error);
+    }
+}
+
+function isDomainRegistered(hostname) {
+    // Check exact match
+    if (registeredDomains.has(hostname)) return true;
+    
+    // Check TLD match (e.g., blog.paper matches .paper TLD)
+    for (const tld of registeredTLDs) {
+        if (hostname.endsWith('.' + tld) || hostname === tld) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
 // Intercept ALL fetch requests (including navigation that becomes fetch)
-self.addEventListener('fetch', (event: FetchEvent) => {
+self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
     
-    // Strategy 1: Catch .paper domains - rewrite immediately (BEFORE DNS)
-    if (url.hostname.endsWith('.paper') || url.hostname === 'paper') {
+    // Strategy 1: Catch registered domains - rewrite immediately (BEFORE DNS)
+    if (isDomainRegistered(url.hostname)) {
         event.respondWith(handlePaperDomain(event.request, url));
         return;
     }

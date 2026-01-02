@@ -4,6 +4,7 @@ import { deploymentLogger } from './deployment-logs';
 import { unbreakableWall } from './unbreakable-wall';
 import { unbreakableFirewall } from './unbreakable-firewall';
 import { paperSelfHost } from './paper-self-host';
+import { pyodideProxyServer } from './pyodide-proxy-server';
 
 // BrowserPod Runtime with PERSISTENCE
 export class BrowserPodRuntime {
@@ -24,6 +25,21 @@ export class BrowserPodRuntime {
         console.log('[BrowserPod] Booting Linux Kernel (WASM)...');
         await this.hydrateFS();
         console.log('[BrowserPod] FS Hydrated. Starting Node.js...');
+        
+        // Start Pyodide Proxy Server (non-blocking)
+        pyodideProxyServer.start().catch((error) => {
+            console.warn('[BrowserPod] Pyodide Proxy Server failed to start:', error);
+            // Continue without Pyodide - fallback mode
+        });
+        
+        // Register default domains (non-blocking)
+        const defaultDomains = ['paper', 'blog.paper', 'shop.paper', 'test.paper'];
+        for (const domain of defaultDomains) {
+            pyodideProxyServer.registerDomain(domain).catch((error) => {
+                console.warn(`[BrowserPod] Failed to register default domain ${domain}:`, error);
+            });
+        }
+        
         this.isReady = true;
     }
 
@@ -124,6 +140,39 @@ export class BrowserPodRuntime {
 
     async handleRequest(domain: string, path: string, clientIP: string = 'unknown'): Promise<{ status: number, headers: any, body: string }> {
         if (!this.isReady) await this.boot();
+
+        // Check if domain is registered with WebVM Proxy Server
+        if (!webvmProxyServer.isDomainRegisteredSync(domain)) {
+            // Auto-register domain if it matches a registered TLD
+            const domainParts = domain.split('.');
+            if (domainParts.length > 1) {
+                const tld = domainParts.slice(-1)[0];
+                if (webvmProxyServer.getTLDs().includes(tld)) {
+                    await webvmProxyServer.manageHostsFile('add', domain);
+                } else {
+                    return {
+                        status: 404,
+                        headers: { 'Content-Type': 'text/html' },
+                        body: `<!DOCTYPE html>
+<html>
+<head>
+    <title>404 Not Found</title>
+    <style>
+        body { font-family: monospace; padding: 2rem; background: #000; color: #ff0000; text-align: center; }
+        h1 { font-size: 2rem; margin-bottom: 1rem; }
+        p { color: #888; }
+    </style>
+</head>
+<body>
+    <h1>404 - Domain Not Found</h1>
+    <p>Domain "${domain}" is not registered.</p>
+    <p style="margin-top: 2rem; color: #666;">Register this domain via the WebVM Proxy Server API</p>
+</body>
+</html>`
+                    };
+                }
+            }
+        }
 
         // Unbreakable Firewall check (MOST STRICT)
         const ip = clientIP || 'unknown';

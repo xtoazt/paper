@@ -5,11 +5,13 @@ import { AppGrid } from './components/ui/AppGrid';
 import { LogsView, LogEntry } from './components/ui/LogsView';
 import { FileExplorer } from './components/ui/FileExplorer';
 import { WebVMTerminal } from './components/ui/WebVMTerminal';
+import { pyodideProxyServer } from './lib/pyodide-proxy-server';
 import { VMStatus } from './components/ui/VMStatus';
 import { SecurityDashboard } from './components/ui/SecurityDashboard';
 import { DeploymentLogsView } from './components/ui/DeploymentLogsView';
 import { ImportModal } from './components/ui/ImportModal';
 import { DashboardSettings } from './components/ui/DashboardSettings';
+import { DomainManager } from './components/ui/DomainManager';
 import { unbreakableWall } from './lib/unbreakable-wall';
 import { unbreakableFirewall } from './lib/unbreakable-firewall';
 import { paperSelfHost } from './lib/paper-self-host';
@@ -133,6 +135,42 @@ function App() {
               const start = performance.now();
               try {
                   const clientIP = headers['x-forwarded-for'] || headers['x-real-ip'] || 'unknown';
+                  
+                  // Check with Pyodide proxy server first (firewall + domain validation)
+                  try {
+                      const proxyCheck = await pyodideProxyServer.handleRequest(
+                          method || 'GET',
+                          path,
+                          domain,
+                          headers,
+                          '',
+                          clientIP,
+                          `req-${Date.now()}-${Math.random()}`
+                      );
+                      
+                      // If blocked or not found, return proxy response
+                      if (proxyCheck.status === 403 || proxyCheck.status === 404) {
+                          port.postMessage({
+                              status: proxyCheck.status,
+                              headers: proxyCheck.headers || {},
+                              body: proxyCheck.body || ''
+                          });
+                          return;
+                      }
+                  } catch (proxyError: any) {
+                      // If Pyodide fails, continue with basic domain check
+                      console.warn('[App] Pyodide proxy check failed, using fallback:', proxyError.message);
+                      if (!pyodideProxyServer.isDomainRegisteredSync(domain)) {
+                          port.postMessage({
+                              status: 404,
+                              headers: { 'Content-Type': 'text/html' },
+                              body: '<html><body><h1>404 - Domain Not Found</h1><p>Domain not registered.</p></body></html>'
+                          });
+                          return;
+                      }
+                  }
+                  
+                  // Process request with runtime
                   const result = await runtime.handleRequest(domain, path, clientIP);
                   
                   // WAF Fingerprinting
@@ -160,7 +198,46 @@ function App() {
       };
 
       navigator.serviceWorker.addEventListener('message', handleGatewayMessage);
-      return () => navigator.serviceWorker.removeEventListener('message', handleGatewayMessage);
+      
+      // Handle domain registration messages
+      const handleDomainRegistration = async (event: MessageEvent) => {
+        if (event.data && event.data.type === 'REGISTER_DOMAIN') {
+          const { domain } = event.data;
+          try {
+            await webvmProxyServer.manageHostsFile('add', domain);
+            // Notify Service Worker
+            if (navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({
+                type: 'DOMAIN_REGISTERED',
+                domain
+              });
+            }
+            console.log(`[Paper] Registered domain: ${domain}`);
+          } catch (error: any) {
+            console.error(`[Paper] Failed to register domain ${domain}:`, error);
+          }
+        } else if (event.data && event.data.type === 'REGISTER_TLD') {
+          const { tld } = event.data;
+          try {
+            await webvmProxyServer.manageHostsFile('add', tld);
+            // Also register as TLD
+            const handler = (webvmProxyServer as any).requestHandlers?.get('register_tld');
+            if (handler) {
+              await handler({ tld });
+            }
+            console.log(`[Paper] Registered TLD: ${tld}`);
+          } catch (error: any) {
+            console.error(`[Paper] Failed to register TLD ${tld}:`, error);
+          }
+        }
+      };
+      
+      window.addEventListener('message', handleDomainRegistration);
+      
+      return () => {
+        navigator.serviceWorker.removeEventListener('message', handleGatewayMessage);
+        window.removeEventListener('message', handleDomainRegistration);
+      };
   }, []);
 
   // Also try native daemon (optional, for users who want OS-level TLD)
@@ -244,6 +321,8 @@ function App() {
                 <SecurityDashboard />
             ) : view === 'settings' ? (
                 <DashboardSettings />
+            ) : view === 'domains' ? (
+                <DomainManager />
             ) : (
                 <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
                     <div className="flex justify-between items-center">

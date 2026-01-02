@@ -33,3 +33,6 @@ export const Terminal: React.FC<TerminalProps> = ({ logs }) => {
     );
 };
 
+
+
+
