@@ -290,7 +290,8 @@ class UnbreakableFirewall:
             ],
             'command_injection': [
                 re.compile(r'[;&|__BACKTICK_PLACEHOLDER__$(){}[\\]]'),
-        
+        `;
+
         const firewallCodeAfter = String.raw`
                 re.compile(r'(?i)\\b(cmd|command|sh|bash|powershell|exec|system|popen|shell_exec)\\b'),
                 re.compile(r'(?i)(/\\w+/(bin|usr|etc)/\\w+)'),
