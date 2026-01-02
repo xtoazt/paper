@@ -296,7 +296,7 @@ js_bridge = JSBridge()
             "            ],",
             "            'ssrf': [",
             "                re.compile(r'(127\\.0\\.0\\.1|localhost|0\\.0\\.0\\.0|::1)'),",
-            "                re.compile(r'(10\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.|192\\.168\\.)'),
+            "                re.compile(r'(10\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.|192\\.168\\.)'),",
             "                re.compile(r'(?i)(file://|gopher://|dict://)'),",
             "            ],",
             "            'rce': [",
@@ -370,7 +370,7 @@ js_bridge = JSBridge()
             "            'ip': ip,",
             "            'attack_type': attack_type,",
             "            'path': path,",
-            "            'severity': 'critical'",
+            "            'severity': 'critical',",
             "        }",
             "        history = self.request_history[ip]",
             "        history.append(log_entry)",
@@ -393,8 +393,8 @@ js_bridge = JSBridge()
             "            'allowed_ips': len(self.allowed_ips),",
             "            'total_attacks': sum(len(h) for h in self.request_history.values()),",
             "            'active_rate_limits': len(self.rate_limits),",
-            "        },",
-            "",,
+            "        }",
+            "",
             "firewall = UnbreakableFirewall()"
         ].join('\n');
 
@@ -931,4 +931,3 @@ result = proxy_server.get_stats()`);
 
 // Export singleton instance
 export const pyodideProxyServer = new PyodideProxyServer();
-
