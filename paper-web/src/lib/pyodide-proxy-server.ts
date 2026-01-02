@@ -85,7 +85,7 @@ export class PyodideProxyServer {
 
     private async setupPythonEnvironment() {
         // Create hosts file manager with child_process simulation
-        const hostsManagerCode = `
+        const hostsManagerCode = String.raw`
 import json
 import os
 from pathlib import Path
@@ -191,7 +191,7 @@ hosts_manager = HostsManager()
         this.pyodide.runPython(hostsManagerCode);
 
         // Set up JS bridge module for domain persistence
-        this.pyodide.runPython(`
+        this.pyodide.runPython(String.raw`
 import json
 
 class JSBridge:
@@ -231,7 +231,7 @@ js_bridge = JSBridge()
         };
 
         // Create firewall
-        const firewallCode = `
+        const firewallCode = String.raw`
 import re
 import time
 from collections import defaultdict
@@ -260,7 +260,7 @@ class UnbreakableFirewall:
                 re.compile(r'(?i)eval\\s*\\('),
             ],
             'command_injection': [
-                re.compile(r'[;&|`$(){}[\\]]'),
+                re.compile(r'[;&|\\`$(){}[\\]]'),
                 re.compile(r'(?i)\\b(cmd|command|sh|bash|powershell|exec|system|popen|shell_exec)\\b'),
                 re.compile(r'(?i)(/\\w+/(bin|usr|etc)/\\w+)'),
             ],
@@ -384,7 +384,7 @@ firewall = UnbreakableFirewall()
         await this.initialize();
 
         // Create the proxy server
-        const proxyServerCode = `
+        const proxyServerCode = String.raw`
 import json
 import asyncio
 from js import window, document, console
@@ -452,7 +452,7 @@ class ProxyServer:
         severity = firewall_check.get('severity', 'medium')
         attack_type = firewall_check.get('attack_type', '')
         
-        return f'''
+        return f"""
 <!DOCTYPE html>
 <html>
 <head>
@@ -470,12 +470,12 @@ class ProxyServer:
         <h1>🔒 403 - Access Denied</h1>
         <p class="reason">Reason: {reason}</p>
         <p class="severity">Severity: {severity.upper()}</p>
-        {f'<p>Attack Type: {attack_type}</p>' if attack_type else ''}
+        {'<p>Attack Type: ' + attack_type + '</p>' if attack_type else ''}
         <p style="margin-top: 2rem; color: #666;">Unbreakable Firewall - Cannot be bypassed</p>
     </div>
 </body>
 </html>
-        '''
+        """
     
     def register_domain(self, domain):
         """Register a domain"""
@@ -518,7 +518,7 @@ class ProxyServer:
             'pending_requests': len(self.pending_requests)
         }
 
-proxy_server = ProxyServer("${this.options.host}", ${this.options.port})
+proxy_server = ProxyServer(` + JSON.stringify(this.options.host) + `, ` + this.options.port + `)
         `;
 
         this.pyodide.runPython(proxyServerCode);
@@ -541,10 +541,10 @@ proxy_server = ProxyServer("${this.options.host}", ${this.options.port})
             // Load domains into Python hosts_manager
             const domainsJson = JSON.stringify(data.domains);
             const tldsJson = JSON.stringify(data.tlds);
-            this.pyodide.runPython(`
+            this.pyodide.runPython(String.raw`
 import json
-domains_list = json.loads('${domainsJson}')
-tlds_list = json.loads('${tldsJson}')
+domains_list = json.loads(` + JSON.stringify(domainsJson) + `)
+tlds_list = json.loads(` + JSON.stringify(tldsJson) + `)
 
 # Add all domains to hosts_manager
 for domain in domains_list:
@@ -668,10 +668,11 @@ for tld in tlds_list:
         }
 
         try {
-            const escapedDomain = domain.replace(/"/g, '\\"').replace(/\$/g, '\\$');
-            this.pyodide.runPython(`
+            const escapedDomain = domain.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\$/g, '\\$');
+            const domainJson = JSON.stringify(domain);
+            this.pyodide.runPython(String.raw`
 import json
-result = proxy_server.register_domain("${escapedDomain}")
+result = proxy_server.register_domain(` + domainJson + `)
             `);
             const result = this.pyodide.runPython('json.dumps(result)');
             const parsed = JSON.parse(result);
@@ -689,11 +690,18 @@ result = proxy_server.register_domain("${escapedDomain}")
 
     async registerTLD(tld: string): Promise<any> {
         await this.initialize();
-        const escapedTLD = tld.replace(/"/g, '\\"');
-        this.pyodide.runPython(`
+        if (!this.pyodide) {
+            this.tlds.add(tld);
+            await this.saveDomainsToIndexedDB(Array.from(this.domains), Array.from(this.tlds));
+            this.notifyServiceWorker(tld, true);
+            return { type: 'tld_registered', tld, all_domains: Array.from(this.domains) };
+        }
+        try {
+            const tldJson = JSON.stringify(tld);
+            this.pyodide.runPython(String.raw`
 import json
-result = proxy_server.register_tld("${escapedTLD}")
-        `);
+result = proxy_server.register_tld(` + tldJson + `)
+            `);
         const result = this.pyodide.runPython('json.dumps(result)');
         const parsed = JSON.parse(result);
         if (parsed.tld) {
@@ -731,28 +739,28 @@ result = proxy_server.register_tld("${escapedTLD}")
         }
 
         try {
-            const headersJson = JSON.stringify(headers || {}).replace(/'/g, "\\'").replace(/\\/g, '\\\\');
-            const bodyJson = (body || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
-            const escapedMethod = method.replace(/"/g, '\\"').replace(/\$/g, '\\$');
-            const escapedPath = path.replace(/"/g, '\\"').replace(/\$/g, '\\$');
-            const escapedHost = host.replace(/"/g, '\\"').replace(/\$/g, '\\$');
-            const escapedClientIP = clientIP.replace(/"/g, '\\"').replace(/\$/g, '\\$');
-            const escapedRequestId = requestId.replace(/"/g, '\\"').replace(/\$/g, '\\$');
+            const methodJson = JSON.stringify(method);
+            const pathJson = JSON.stringify(path);
+            const hostJson = JSON.stringify(host);
+            const headersJson = JSON.stringify(headers || {});
+            const bodyJson = JSON.stringify(body || '');
+            const clientIPJson = JSON.stringify(clientIP);
+            const requestIdJson = JSON.stringify(requestId);
             
-            this.pyodide.runPython(`
+            this.pyodide.runPython(String.raw`
 import json
 try:
     result = proxy_server.handle_request(
-        "${escapedMethod}",
-        "${escapedPath}",
-        "${escapedHost}",
-        json.loads('${headersJson}'),
-        "${bodyJson}",
-        "${escapedClientIP}",
-        "${escapedRequestId}"
+        ` + methodJson + `,
+        ` + pathJson + `,
+        ` + hostJson + `,
+        json.loads(` + JSON.stringify(headersJson) + `),
+        ` + bodyJson + `,
+        ` + clientIPJson + `,
+        ` + requestIdJson + `
     )
 except Exception as e:
-    result = {'id': '${escapedRequestId}', 'type': 'error', 'error': str(e)}
+    result = {'id': ` + requestIdJson + `, 'type': 'error', 'error': str(e)}
             `);
             const result = this.pyodide.runPython('json.dumps(result)');
             return JSON.parse(result);
@@ -773,7 +781,17 @@ except Exception as e:
 
     async getStats(): Promise<any> {
         await this.initialize();
-        this.pyodide.runPython('import json\nresult = proxy_server.get_stats()');
+        if (!this.pyodide) {
+            return {
+                type: 'stats',
+                firewall: { blocked_ips: 0, allowed_ips: 0, total_attacks: 0, active_rate_limits: 0 },
+                domains: Array.from(this.domains),
+                tlds: Array.from(this.tlds),
+                pending_requests: 0
+            };
+        }
+        this.pyodide.runPython(String.raw`import json
+result = proxy_server.get_stats()`);
         const result = this.pyodide.runPython('json.dumps(result)');
         return JSON.parse(result);
     }
