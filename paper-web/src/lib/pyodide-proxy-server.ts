@@ -256,156 +256,147 @@ js_bridge = JSBridge()
         };
 
         // Create firewall
-        // Build regex pattern with backtick separately to avoid template literal issues
-        const backtickChar = String.fromCharCode(96);
-        const commandInjectionPattern = '[;&|' + backtickChar + '$(){}[\\\\]]';
-        
-        const firewallCodeBefore = String.raw`
-import re
-import time
-from collections import defaultdict
-
-class UnbreakableFirewall:
-    def __init__(self):
-        self.active = True
-        self.blocked_ips = set()
-        self.allowed_ips = set()
-        self.rate_limits = defaultdict(list)
-        self.attack_patterns = self._init_patterns()
-        self.request_history = defaultdict(list)
-    
-    def _init_patterns(self):
-        return {
-            'sql_injection': [
-                re.compile(r'(?i)\\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|EXECUTE|UNION|SCRIPT)\\b'),
-                re.compile(r'(?i)\\b(OR|AND)\\s+\\d+\\s*=\\s*\\d+'),
-                re.compile(r'(?i)(xp_cmdshell|sp_executesql|CONCAT|GROUP_CONCAT)'),
-                re.compile(r'[;\\'\\\\]'),
-            ],
-            'xss': [
-                re.compile(r'(?i)<script[^>]*>.*?</script>'),
-                re.compile(r'(?i)javascript:'),
-                re.compile(r'(?i)on\\w+\\s*='),
-                re.compile(r'(?i)eval\\s*\\('),
-            ],
-            'command_injection': [
-                re.compile(r'[;&|__BACKTICK_PLACEHOLDER__$(){}[\\]]'),
-        `;
-
-        const firewallCodeAfter = String.raw`
-                re.compile(r'(?i)\\b(cmd|command|sh|bash|powershell|exec|system|popen|shell_exec)\\b'),
-                re.compile(r'(?i)(/\\w+/(bin|usr|etc)/\\w+)'),
-            ],
-            'path_traversal': [
-                re.compile(r'\\.\\.(/|\\\\|%2f|%5c)', re.I),
-                re.compile(r'(?i)(/|\\\\|%2f|%5c)(etc|proc|sys|dev|boot|root|home|usr|var|tmp)(/|\\\\|%2f|%5c)'),
-            ],
-            'ssrf': [
-                re.compile(r'(127\\.0\\.0\\.1|localhost|0\\.0\\.0\\.0|::1)'),
-                re.compile(r'(10\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.|192\\.168\\.)'),
-                re.compile(r'(?i)(file://|gopher://|dict://)'),
-            ],
-            'rce': [
-                re.compile(r'(?i)\\b(eval|exec|system|passthru|shell_exec|popen|proc_open|pcntl_exec)\\s*\\('),
-                re.compile(r'\\$\\{.*?\\}'),
-            ],
-        }
-    
-    def check_request(self, ip, method, path, headers=None, body=''):
-        if not self.active:
-            return {'allowed': True}
-        
-        if ip in self.allowed_ips:
-            return {'allowed': True}
-        
-        if ip in self.blocked_ips:
-            return {'allowed': False, 'reason': 'IP Blocked by Firewall', 'severity': 'high'}
-        
-        # Rate limiting
-        rate_check = self._check_rate_limit(ip)
-        if not rate_check['allowed']:
-            self.blocked_ips.add(ip)
-            return rate_check
-        
-        # Combine inputs for pattern matching
-        import json
-        all_inputs = f"{method} {path} {json.dumps(headers or {})} {body}".lower()
-        
-        # Check attack patterns
-        for attack_type, patterns in self.attack_patterns.items():
-            for pattern in patterns:
-                if pattern.search(all_inputs):
-                    self.blocked_ips.add(ip)
-                    self._log_attack(ip, attack_type, path)
-                    return {
-                        'allowed': False,
-                        'reason': f'{attack_type} detected',
-                        'severity': 'critical',
-                        'attack_type': attack_type
-                    }
-        
-        return {'allowed': True}
-    
-    def _check_rate_limit(self, ip):
-        now = time.time()
-        window = 60  # 1 minute
-        max_requests = 100
-        burst_limit = 20
-        burst_window = 5
-        
-        requests = self.rate_limits[ip]
-        recent = [t for t in requests if now - t < window]
-        
-        # Check burst limit
-        burst_requests = [t for t in recent if now - t < burst_window]
-        if len(burst_requests) >= burst_limit:
-            return {'allowed': False, 'reason': 'Burst rate limit exceeded', 'severity': 'high'}
-        
-        # Check overall rate limit
-        if len(recent) >= max_requests:
-            return {'allowed': False, 'reason': 'Rate limit exceeded', 'severity': 'medium'}
-        
-        # Add current request
-        recent.append(now)
-        self.rate_limits[ip] = recent
-        
-        return {'allowed': True}
-    
-    def _log_attack(self, ip, attack_type, path):
-        log_entry = {
-            'timestamp': time.time(),
-            'ip': ip,
-            'attack_type': attack_type,
-            'path': path,
-            'severity': 'critical'
-        }
-        history = self.request_history[ip]
-        history.append(log_entry)
-        if len(history) > 100:
-            history.pop(0)
-    
-    def block_ip(self, ip):
-        self.blocked_ips.add(ip)
-    
-    def unblock_ip(self, ip):
-        self.blocked_ips.discard(ip)
-        self.rate_limits.pop(ip, None)
-    
-    def allow_ip(self, ip):
-        self.allowed_ips.add(ip)
-    
-    def get_stats(self):
-        return {
-            'blocked_ips': len(self.blocked_ips),
-            'allowed_ips': len(self.allowed_ips),
-            'total_attacks': sum(len(h) for h in self.request_history.values()),
-            'active_rate_limits': len(self.rate_limits)
-        }
-
-firewall = UnbreakableFirewall()
-        `;
-        
-        const firewallCode = (firewallCodeBefore + firewallCodeAfter).replace('__BACKTICK_PLACEHOLDER__', String.fromCharCode(96));
+        const firewallCode = [
+            "import re",
+            "import time",
+            "import json",
+            "from collections import defaultdict",
+            "",
+            "class UnbreakableFirewall:",
+            "    def __init__(self):",
+            "        self.active = True",
+            "        self.blocked_ips = set()",
+            "        self.allowed_ips = set()",
+            "        self.rate_limits = defaultdict(list)",
+            "        self.attack_patterns = self._init_patterns()",
+            "        self.request_history = defaultdict(list)",
+            "    ",
+            "    def _init_patterns(self):",
+            "        return {",
+            "            'sql_injection': [",
+            "                re.compile(r'(?i)\\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|EXECUTE|UNION|SCRIPT)\\b'),",
+            "                re.compile(r'(?i)\\b(OR|AND)\\s+\\d+\\s*=\\s*\\d+'),",
+            "                re.compile(r'(?i)(xp_cmdshell|sp_executesql|CONCAT|GROUP_CONCAT)'),",
+            "                re.compile(r'[;\\'\\\\]'),",
+            "            ],",
+            "            'xss': [",
+            "                re.compile(r'(?i)<script[^>]*>.*?</script>'),",
+            "                re.compile(r'(?i)javascript:'),",
+            "                re.compile(r'(?i)on\\w+\\s*='),",
+            "                re.compile(r'(?i)eval\\s*\\('),",
+            "            ],",
+            "            'command_injection': [",
+            "                re.compile(r'[;&|\\x60$(){}[\\]]'),",
+            "                re.compile(r'(?i)\\b(cmd|command|sh|bash|powershell|exec|system|popen|shell_exec)\\b'),",
+            "                re.compile(r'(?i)(/\\w+/(bin|usr|etc)/\\w+)'),",
+            "            ],",
+            "            'path_traversal': [",
+            "                re.compile(r'\\.\\.(/|\\\\|%2f|%5c)', re.I),",
+            "                re.compile(r'(?i)(/|\\\\|%2f|%5c)(etc|proc|sys|dev|boot|root|home|usr|var|tmp)(/|\\\\|%2f|%5c)'),",
+            "            ],",
+            "            'ssrf': [",
+            "                re.compile(r'(127\\.0\\.0\\.1|localhost|0\\.0\\.0\\.0|::1)'),",
+            "                re.compile(r'(10\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.|192\\.168\\.)'),
+            "                re.compile(r'(?i)(file://|gopher://|dict://)'),",
+            "            ],",
+            "            'rce': [",
+            "                re.compile(r'(?i)\\b(eval|exec|system|passthru|shell_exec|popen|proc_open|pcntl_exec)\\s*\\('),",
+            "                re.compile(r'\\$\\{.*?\\}'),",
+            "            ],",
+            "        }",
+            "    ",
+            "    def check_request(self, ip, method, path, headers=None, body=''):",
+            "        if not self.active:",
+            "            return {'allowed': True}",
+            "        ",
+            "        if ip in self.allowed_ips:",
+            "            return {'allowed': True}",
+            "        ",
+            "        if ip in self.blocked_ips:",
+            "            return {'allowed': False, 'reason': 'IP Blocked by Firewall', 'severity': 'high'}",
+            "        ",
+            "        # Rate limiting",
+            "        rate_check = self._check_rate_limit(ip)",
+            "        if not rate_check['allowed']:",
+            "            self.blocked_ips.add(ip)",
+            "            return rate_check",
+            "        ",
+            "        # Combine inputs for pattern matching",
+            "        all_inputs = f\"{method} {path} {json.dumps(headers or {})} {body}\".lower()",
+            "        ",
+            "        # Check attack patterns",
+            "        for attack_type, patterns in self.attack_patterns.items():",
+            "            for pattern in patterns:",
+            "                if pattern.search(all_inputs):",
+            "                    self.blocked_ips.add(ip)",
+            "                    self._log_attack(ip, attack_type, path)",
+            "                    return {",
+            "                        'allowed': False,",
+            "                        'reason': f'{attack_type} detected',",
+            "                        'severity': 'critical',",
+            "                        'attack_type': attack_type",
+            "                    }",
+            "        ",
+            "        return {'allowed': True}",
+            "    ",
+            "    def _check_rate_limit(self, ip):",
+            "        now = time.time()",
+            "        window = 60  # 1 minute",
+            "        max_requests = 100",
+            "        burst_limit = 20",
+            "        burst_window = 5",
+            "        ",
+            "        requests = self.rate_limits[ip]",
+            "        recent = [t for t in requests if now - t < window]",
+            "        ",
+            "        # Check burst limit",
+            "        burst_requests = [t for t in recent if now - t < burst_window]",
+            "        if len(burst_requests) >= burst_limit:",
+            "            return {'allowed': False, 'reason': 'Burst rate limit exceeded', 'severity': 'high'}",
+            "        ",
+            "        # Check overall rate limit",
+            "        if len(recent) >= max_requests:",
+            "            return {'allowed': False, 'reason': 'Rate limit exceeded', 'severity': 'medium'}",
+            "        ",
+            "        # Add current request",
+            "        recent.append(now)",
+            "        self.rate_limits[ip] = recent",
+            "        ",
+            "        return {'allowed': True}",
+            "    ",
+            "    def _log_attack(self, ip, attack_type, path):",
+            "        log_entry = {",
+            "            'timestamp': time.time(),",
+            "            'ip': ip,",
+            "            'attack_type': attack_type,",
+            "            'path': path,",
+            "            'severity': 'critical'",
+            "        }",
+            "        history = self.request_history[ip]",
+            "        history.append(log_entry)",
+            "        if len(history) > 100:",
+            "            history.pop(0)",
+            "    ",
+            "    def block_ip(self, ip):",
+            "        self.blocked_ips.add(ip)",
+            "    ",
+            "    def unblock_ip(self, ip):",
+            "        self.blocked_ips.discard(ip)",
+            "        self.rate_limits.pop(ip, None)",
+            "    ",
+            "    def allow_ip(self, ip):",
+            "        self.allowed_ips.add(ip)",
+            "    ",
+            "    def get_stats(self):",
+            "        return {",
+            "            'blocked_ips': len(self.blocked_ips),",
+            "            'allowed_ips': len(self.allowed_ips),",
+            "            'total_attacks': sum(len(h) for h in self.request_history.values()),",
+            "            'active_rate_limits': len(self.rate_limits),",
+            "        },",
+            "",,
+            "firewall = UnbreakableFirewall()"
+        ].join('\n');
 
         this.pyodide.runPython(firewallCode);
     }
@@ -771,7 +762,11 @@ result = proxy_server.register_tld(` + tldJson + `)
             await this.saveDomainsToIndexedDB(Array.from(this.domains), Array.from(this.tlds));
         }
         return parsed;
+    } catch (error: any) {
+        console.error('[PyodideProxy] Failed to register TLD:', error);
+        throw error;
     }
+}
 
     async handleRequest(method: string, path: string, host: string, headers: any, body: string, clientIP: string, requestId: string): Promise<any> {
         if (!this.pyodide) {
