@@ -29,7 +29,7 @@ export class UnbreakableFirewall {
             ctx.font = '14px Arial';
             ctx.fillText('Paper Firewall', 2, 2);
             // Fingerprint stored but not used yet
-            const _fingerprint = canvas.toDataURL().slice(0, 50);
+            // const _fingerprint = canvas.toDataURL().slice(0, 50);
         }
     }
 

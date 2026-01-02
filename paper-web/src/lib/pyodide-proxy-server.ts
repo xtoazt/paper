@@ -2,7 +2,7 @@
 // Runs Python server code inside WebVM with child_process simulation
 // Provides unlimited TLD support with unbreakable firewall
 
-import { UnbreakableFirewall } from './unbreakable-firewall';
+// import { UnbreakableFirewall } from './unbreakable-firewall';
 
 interface PyodideProxyServerOptions {
     port?: number;
