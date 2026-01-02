@@ -6,6 +6,7 @@ import { LogsView, LogEntry } from './components/ui/LogsView';
 import { FileExplorer } from './components/ui/FileExplorer';
 import { WebVMTerminal } from './components/ui/WebVMTerminal';
 import { pyodideProxyServer } from './lib/pyodide-proxy-server';
+// import { webvmProxyServer } from './lib/webvm-proxy-server'; // Removed
 import { VMStatus } from './components/ui/VMStatus';
 import { SecurityDashboard } from './components/ui/SecurityDashboard';
 import { DeploymentLogsView } from './components/ui/DeploymentLogsView';
@@ -204,7 +205,7 @@ function App() {
         if (event.data && event.data.type === 'REGISTER_DOMAIN') {
           const { domain } = event.data;
           try {
-            await webvmProxyServer.manageHostsFile('add', domain);
+            await pyodideProxyServer.registerDomain(domain);
             // Notify Service Worker
             if (navigator.serviceWorker.controller) {
               navigator.serviceWorker.controller.postMessage({
@@ -219,12 +220,12 @@ function App() {
         } else if (event.data && event.data.type === 'REGISTER_TLD') {
           const { tld } = event.data;
           try {
-            await webvmProxyServer.manageHostsFile('add', tld);
+            await pyodideProxyServer.registerTLD(tld);
             // Also register as TLD
-            const handler = (webvmProxyServer as any).requestHandlers?.get('register_tld');
-            if (handler) {
-              await handler({ tld });
-            }
+            // const handler = (webvmProxyServer as any).requestHandlers?.get('register_tld');
+            // if (handler) {
+            //   await handler({ tld });
+            // }
             console.log(`[Paper] Registered TLD: ${tld}`);
           } catch (error: any) {
             console.error(`[Paper] Failed to register TLD ${tld}:`, error);

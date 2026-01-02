@@ -230,7 +230,7 @@ export class UnbreakableFirewall {
 
         // Check rate limit
         const now = Date.now();
-        const window = 60000; // 1 minute
+        const timeWindow = 60000; // 1 minute
         const maxRequests = 100;
 
         if (!this.rateLimits.has(ip)) {
@@ -238,7 +238,7 @@ export class UnbreakableFirewall {
         }
 
         const requests = this.rateLimits.get(ip)!;
-        const recent = requests.filter(t => now - t < window);
+        const recent = requests.filter(t => now - t < timeWindow);
         
         if (recent.length >= maxRequests && ip !== 'self-hosted') {
             this.blockedIPs.add(ip);

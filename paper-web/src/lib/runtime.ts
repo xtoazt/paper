@@ -141,14 +141,14 @@ export class BrowserPodRuntime {
     async handleRequest(domain: string, path: string, clientIP: string = 'unknown'): Promise<{ status: number, headers: any, body: string }> {
         if (!this.isReady) await this.boot();
 
-        // Check if domain is registered with WebVM Proxy Server
-        if (!webvmProxyServer.isDomainRegisteredSync(domain)) {
+        // Check if domain is registered with Pyodide Proxy Server
+        if (!pyodideProxyServer.isDomainRegisteredSync(domain)) {
             // Auto-register domain if it matches a registered TLD
             const domainParts = domain.split('.');
             if (domainParts.length > 1) {
                 const tld = domainParts.slice(-1)[0];
-                if (webvmProxyServer.getTLDs().includes(tld)) {
-                    await webvmProxyServer.manageHostsFile('add', domain);
+                if (pyodideProxyServer.getTLDs().includes(tld)) {
+                    await pyodideProxyServer.registerDomain(domain);
                 } else {
                     return {
                         status: 404,

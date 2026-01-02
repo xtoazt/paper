@@ -21,7 +21,7 @@ export class WebVMProxyServer {
     private domains: Set<string> = new Set();
     private tlds: Set<string> = new Set();
     private pendingRequests: Map<string, PendingRequest> = new Map();
-    private controlWS: WebSocket | null = null;
+    // private controlWS: WebSocket | null = null;
     private requestHandlers: Map<string, (req: any) => Promise<any>> = new Map();
     private isRunning: boolean = false;
 
@@ -158,7 +158,12 @@ export class WebVMProxyServer {
             const db = await this.openDB();
             const tx = db.transaction('domains', 'readonly');
             const store = tx.objectStore('domains');
-            const domains = await store.get('registered_domains');
+            const domains: any = await new Promise((resolve, reject) => {
+                const request = store.get('registered_domains');
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+            
             if (domains) {
                 this.domains = new Set(domains);
             }
@@ -225,8 +230,7 @@ export class WebVMProxyServer {
         const firewallCheck = this.firewall.checkRequest(
             clientIP || 'unknown',
             path || '/',
-            headers || {},
-            body || ''
+            headers || {}
         );
 
         if (!firewallCheck.allowed) {

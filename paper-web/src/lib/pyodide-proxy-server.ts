@@ -14,7 +14,7 @@ export class PyodideProxyServer {
     private isRunning: boolean = false;
     private isInitializing: boolean = false;
     private initializationError: Error | null = null;
-    private firewall: UnbreakableFirewall;
+    // private firewall: UnbreakableFirewall; // Unused
     private domains: Set<string> = new Set();
     private tlds: Set<string> = new Set();
     private options: PyodideProxyServerOptions;
@@ -26,7 +26,7 @@ export class PyodideProxyServer {
             port: options.port || 8080,
             host: options.host || '127.0.0.1'
         };
-        this.firewall = UnbreakableFirewall.getInstance();
+        // this.firewall = UnbreakableFirewall.getInstance();
     }
 
     async initialize() {
@@ -640,7 +640,12 @@ for tld in tlds_list:
             const db = await this.openDB();
             const tx = db.transaction(this.storeName, 'readonly');
             const store = tx.objectStore(this.storeName);
-            const data = await store.get('registered');
+            
+            const data: any = await new Promise((resolve, reject) => {
+                const request = store.get('registered');
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
             
             if (data) {
                 return {
@@ -719,7 +724,7 @@ for tld in tlds_list:
         }
 
         try {
-            const escapedDomain = domain.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\$/g, '\\$');
+            // const escapedDomain = domain.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\$/g, '\\$');
             const domainJson = JSON.stringify(domain);
             this.pyodide.runPython(String.raw`
 import json
