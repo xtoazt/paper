@@ -1,0 +1,20 @@
+# paper.is-a.software robots.txt
+
+User-agent: *
+Allow: /
+
+# Sitemaps
+Sitemap: https://paper.is-a.software/sitemap.xml
+
+# Fast crawling
+Crawl-delay: 0
+
+# Allow all bots
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
