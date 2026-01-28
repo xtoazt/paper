@@ -349,7 +349,7 @@ export const UltimateLanding: React.FC = () => {
               </div>
               <div className="superiority-spec">
                 <span className="spec-label">Cached:</span>
-                <span className="spec-value">< 10ms</span>
+                <span className="spec-value">&lt; 10ms</span>
               </div>
               <div className="superiority-spec">
                 <span className="spec-label">CDN:</span>

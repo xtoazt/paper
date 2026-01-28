@@ -205,7 +205,7 @@ Cost: 💰 $0.00
             <div className="feature-card">
               <div className="feature-icon">⚡</div>
               <h3>Edge Performance</h3>
-              <p>P2P CDN with < 50ms resolution worldwide. Content cached across 1000+ peers automatically.</p>
+              <p>P2P CDN with &lt; 50ms resolution worldwide. Content cached across 1000+ peers automatically.</p>
               <div className="feature-metric">
                 <span className="metric-value">47ms</span>
                 <span className="metric-label">avg. response time</span>
@@ -247,7 +247,7 @@ Cost: 💰 $0.00
               <h3>Instant Deployments</h3>
               <p>Deploy in under 10 seconds. No build queues, no cold starts. Global availability instantly.</p>
               <div className="feature-metric">
-                <span className="metric-value">< 10s</span>
+                <span className="metric-value">&lt; 10s</span>
                 <span className="metric-label">time to deploy</span>
               </div>
             </div>
@@ -305,7 +305,7 @@ Cost: 💰 $0.00
             <div className="comparison-row">
               <div className="comparison-col feature-name">Deploy Time</div>
               <div className="comparison-col highlight">
-                <span className="check">< 10s</span>
+                <span className="check">&lt; 10s</span>
               </div>
               <div className="comparison-col">30-120s</div>
               <div className="comparison-col">20-90s</div>

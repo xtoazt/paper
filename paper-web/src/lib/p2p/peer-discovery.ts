@@ -58,7 +58,7 @@ export class PeerDiscovery {
     // Start periodic discovery
     this.discoveryTimer = setInterval(() => {
       this.discoverPeers();
-      this.cleanupStale Peers();
+      this.cleanupStalePeers();
     }, this.config.discoveryInterval);
 
     // Initial discovery
