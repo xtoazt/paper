@@ -61,7 +61,7 @@ export class DistributedCron {
   /**
    * Check and execute due jobs
    */
-  private async checkJobs(): void {
+  private async checkJobs(): Promise<void> {
     const now = Date.now();
     
     for (const [id, job] of this.jobs) {

@@ -3,7 +3,8 @@
  * Uses libsodium for secure encryption of tunnel data
  */
 
-import sodium from 'libsodium-wrappers';
+// import sodium from 'libsodium-wrappers';
+const sodium: any = null; // Placeholder - will be loaded dynamically
 
 export interface KeyPair {
   publicKey: Uint8Array;

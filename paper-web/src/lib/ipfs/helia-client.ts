@@ -66,7 +66,7 @@ export class HeliaClient {
       this.json = json(this.helia);
 
       console.log('[Helia] IPFS node initialized successfully');
-      console.log('[Helia] Peer ID:', this.helia.libp2p.peerId.toString());
+      console.log('[Helia] Peer ID:', (this.helia as any).libp2p?.peerId?.toString() || 'unknown');
 
       // Start garbage collection if enabled
       if (this.config.enableGC) {
@@ -337,7 +337,7 @@ export class HeliaClient {
     if (!this.helia) throw new Error('Helia not initialized');
 
     try {
-      const peers = this.helia.libp2p.getPeers();
+      const peers = (this.helia as any).libp2p?.getPeers() || [];
       return peers.map(peer => peer.toString());
     } catch (error) {
       console.error('[Helia] Failed to get peers:', error);
@@ -397,7 +397,7 @@ export class HeliaClient {
    * Get libp2p instance
    */
   getLibp2p(): any {
-    return this.helia?.libp2p || null;
+    return (this.helia as any)?.libp2p || null;
   }
 
   /**

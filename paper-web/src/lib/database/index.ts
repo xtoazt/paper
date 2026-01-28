@@ -1,10 +1,6 @@
 /**
- * Database System - Main Export
+ * Database Service - Main exports
  */
 
-export * from './types';
-export * from './distributed-db';
-export * from './traditional-db';
-
-export { distributedDB } from './distributed-db';
-export { traditionalDB } from './traditional-db';
+export { DistributedDatabase, getDistributedDatabase } from './distributed-db';
+export type { Database, DBType, Shard } from './distributed-db';

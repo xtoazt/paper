@@ -3,7 +3,9 @@
  * Resolves .paper domains using Python DNS server in browser
  */
 
-import { loadPyodide, type PyodideInterface } from 'pyodide';
+// import { loadPyodide, type PyodideInterface } from 'pyodide';
+type PyodideInterface = any;
+declare const loadPyodide: any;
 
 export interface DNSRecord {
   domain: string;

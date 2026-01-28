@@ -17,7 +17,7 @@ export { gitIntegration } from '../deployment';
 
 // Database System
 export * from '../database';
-export { distributedDB, traditionalDB } from '../database';
+export { getDistributedDatabase } from '../database';
 
 // Framework Adapters
 export * from '../adapters';
