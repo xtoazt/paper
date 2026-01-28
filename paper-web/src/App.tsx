@@ -5,7 +5,6 @@
 
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import UltimateLanding from './components/pages/UltimateLanding';
-import { getBootstrapManager } from './lib/bootstrap';
 import './styles/design-system.css';
 import './styles/ultimate-design.css';
 
@@ -15,8 +14,17 @@ const Dashboard = lazy(() => import('./components/Dashboard'));
 function App() {
   const [view, setView] = useState<'landing' | 'dashboard'>('landing');
   const [isBootstrapped, setIsBootstrapped] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Remove loading screen immediately
+    const loadingScreen = document.querySelector('.loading-screen');
+    if (loadingScreen) {
+      loadingScreen.remove();
+    }
+    setIsLoading(false);
+    
+    // Check bootstrap status asynchronously (non-blocking)
     checkBootstrap();
     
     // Handle routing
@@ -28,11 +36,18 @@ function App() {
 
   const checkBootstrap = async () => {
     try {
+      // Dynamic import to avoid blocking
+      const { getBootstrapManager } = await import('./lib/bootstrap');
       const manager = getBootstrapManager();
-      const active = await manager.isActive();
-      setIsBootstrapped(active);
+      const active = await Promise.race([
+        manager.isActive(),
+        new Promise((resolve) => setTimeout(() => resolve(false), 1000)) // 1s timeout
+      ]);
+      setIsBootstrapped(active as boolean);
     } catch (error) {
       console.error('Bootstrap check failed:', error);
+      // Set to false on error so app still renders
+      setIsBootstrapped(false);
     }
   };
 
@@ -47,12 +62,25 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  if (isLoading) {
+    return null; // Let HTML loading screen show
+  }
+
   return (
     <div className="app">
       {view === 'landing' ? (
         <UltimateLanding />
       ) : (
-        <Suspense fallback={<div className="loading">Loading...</div>}>
+        <Suspense fallback={
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            minHeight: '100vh' 
+          }}>
+            Loading Dashboard...
+          </div>
+        }>
           <Dashboard />
         </Suspense>
       )}
