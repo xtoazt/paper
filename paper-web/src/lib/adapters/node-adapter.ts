@@ -7,10 +7,10 @@ import type { FrameworkAdapter, NodeConfig } from './types';
 import type { BuildArtifact } from '../build/types';
 import type { Application } from '../runtime/types';
 import { p2pBuilder } from '../build';
-import { containerRuntime } from '../runtime';
+import { containerRuntime } from '../runtime/';
 
 export class NodeAdapter implements FrameworkAdapter {
-  framework = 'express' as const; // or 'fastify'
+  framework: 'express' | 'fastify' = 'express';
 
   constructor(framework: 'express' | 'fastify') {
     this.framework = framework;

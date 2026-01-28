@@ -13,7 +13,7 @@ export interface FrameworkAdapter {
 }
 
 export interface AdapterConfig {
-  runtime: 'browser' | 'container' | 'hybrid';
+  runtime: 'browser' | 'container' | 'hybrid' | 'edge';
   buildCommand: string;
   startCommand?: string;
   environment?: Record<string, string>;

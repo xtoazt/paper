@@ -130,7 +130,7 @@ export class BrowserBuilder {
         } catch (error) {
           console.error(`[BrowserBuilder] Error transforming ${file.path}:`, error);
           // Fallback: include original file
-          transformed.push(this.convertToBuilFile(file));
+          transformed.push(this.convertToBuildFile(file));
         }
       } else {
         transformed.push(this.convertToBuildFile(file));

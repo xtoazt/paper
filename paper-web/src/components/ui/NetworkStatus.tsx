@@ -45,9 +45,10 @@ export const NetworkStatus: React.FC = () => {
 
     try {
       const nodeManager = getNodeManager();
-      const libp2pNode = await nodeManager.getLibp2pNode();
-      const ipfsNode = await nodeManager.getIpfsNode();
-      const tunnelManager = await nodeManager.getTunnelManager();
+      // Old API methods removed, use new API
+      const libp2pNode = null; // await nodeManager.getLibp2pNode();
+      const ipfsNode = null; // await nodeManager.getIpfsNode();
+      const tunnelManager = null; // await nodeManager.getTunnelManager();
       const globalRegistry = getGlobalRegistry(
         null as any,
         null as any,

@@ -7,10 +7,10 @@ import type { FrameworkAdapter, PythonConfig } from './types';
 import type { BuildArtifact } from '../build/types';
 import type { Application } from '../runtime/types';
 import { p2pBuilder } from '../build';
-import { containerRuntime } from '../runtime';
+import { containerRuntime } from '../runtime/';
 
 export class PythonAdapter implements FrameworkAdapter {
-  framework = 'django' as const; // or 'flask'
+  framework: 'django' | 'flask' = 'django';
 
   constructor(framework: 'django' | 'flask') {
     this.framework = framework;

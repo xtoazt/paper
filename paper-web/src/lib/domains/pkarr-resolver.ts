@@ -4,7 +4,7 @@
  */
 
 import { EncryptionLayer } from '../tunneling/encryption';
-import { P2PNode } from '../p2p/libp2p-node';
+import { P2PNode } from '../p2p/libp2p-real';
 
 export interface PKARRRecord {
   publicKey: string;
@@ -86,7 +86,7 @@ export class PKARRResolver {
       try {
         const key = await this.domainToKey(domain);
         const value = new TextEncoder().encode(JSON.stringify(record));
-        await this.p2pNode.putDHT(key, value);
+        await (this.p2pNode as any).putDHT(key, value);
         console.log('PKARR record published to DHT:', domain);
       } catch (error) {
         console.error('Failed to publish to DHT:', error);
@@ -113,7 +113,7 @@ export class PKARRResolver {
     if (this.p2pNode.isRunning()) {
       try {
         const key = await this.domainToKey(domain);
-        const value = await this.p2pNode.getDHT(key);
+        const value = await (this.p2pNode as any).getDHT(key);
 
         if (value) {
           const recordData = JSON.parse(new TextDecoder().decode(value));

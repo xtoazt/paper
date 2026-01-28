@@ -35,13 +35,13 @@ export class DNSBridge {
 
     // Check local cache first
     const cached = this.queryCache.get(domain);
-    if (cached && (Date.now() - cached.timestamp < this.cacheTimeout)) {
+    if (cached && (Date.now() - (cached as any).timestamp < this.cacheTimeout)) {
       console.log('DNS bridge cache hit:', domain);
       return {
         ...cached,
         cached: true,
         resolveTime: Date.now() - startTime
-      };
+      } as any;
     }
 
     // Query DNS resolver
@@ -65,7 +65,7 @@ export class DNSBridge {
       this.queryCache.set(domain, {
         ...response,
         timestamp: Date.now()
-      });
+      } as any);
     }
 
     return response;

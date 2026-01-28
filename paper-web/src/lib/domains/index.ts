@@ -17,7 +17,7 @@ import { getOnionGenerator } from './onion-generator';
 import { getDomainRegistry } from './domain-registry';
 import { getGlobalRegistry } from './global-registry';
 import { getServerHosting } from './server-hosting';
-import type { P2PNode } from '../p2p/libp2p-node';
+import type { P2PNode } from '../p2p/libp2p-real';
 import type { EncryptionLayer } from '../tunneling/encryption';
 import type { PyodideDNSResolver } from '../pyodide-dns/dns-resolver';
 import type { ConnectionManager } from '../p2p/connection-manager';

@@ -5,7 +5,7 @@
 
 import { PKARRResolver, type PKARRRecord } from './pkarr-resolver';
 import { DHTResolver } from './dht-resolver';
-import { P2PNode } from '../p2p/libp2p-node';
+import { P2PNode } from '../p2p/libp2p-real';
 import { ConnectionManager } from '../p2p/connection-manager';
 
 export interface GlobalDomainRecord {

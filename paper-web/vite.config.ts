@@ -7,15 +7,23 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      'node-fetch': resolve(__dirname, 'src/lib/node-fetch-shim.ts')
+      'node-fetch': resolve(__dirname, 'src/lib/node-fetch-shim.ts'),
+      'libsodium': 'libsodium-wrappers',
+      'libsodium-wrappers': 'libsodium-wrappers'
     }
   },
   optimizeDeps: {
-    exclude: ['pyodide']
+    exclude: ['pyodide'],
+    include: ['libsodium-wrappers']
   },
   build: {
     // Code splitting for optimal loading
     rollupOptions: {
+      external: (id) => {
+        // Externalize problematic dependencies
+        if (id.includes('libsodium.mjs')) return true;
+        return false;
+      },
       output: {
         manualChunks(id) {
           // React core

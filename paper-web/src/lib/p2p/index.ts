@@ -3,13 +3,14 @@
  * Exports all P2P networking components
  */
 
-export * from './libp2p-node';
+// export * from './libp2p-node'; // Old implementation
+export * from './libp2p-real';
 export * from './webrtc-transport';
 export * from './peer-discovery';
 export * from './connection-manager';
 
 // Re-export main initialization function
-import { initP2PNode, getP2PNode } from './libp2p-node';
+// import { initP2PNode, getP2PNode } from './libp2p-node'; // Old implementation
 import { getWebRTCTransport } from './webrtc-transport';
 import { getPeerDiscovery } from './peer-discovery';
 import { initConnectionManager } from './connection-manager';
@@ -20,8 +21,10 @@ import { initConnectionManager } from './connection-manager';
 export async function initP2PInfrastructure() {
   console.log('Initializing P2P infrastructure...');
 
-  // Initialize P2P node
-  const p2pNode = await initP2PNode();
+  // Initialize P2P node (using new implementation)
+  const { Libp2pNode } = await import('./libp2p-real');
+  const p2pNode = new Libp2pNode();
+  await p2pNode.start();
 
   // Initialize WebRTC transport
   const webrtcTransport = getWebRTCTransport();

@@ -3,7 +3,7 @@
  * Discovers and maintains connections to peers in the network
  */
 
-import { P2PNode } from './libp2p-node';
+import { P2PNode } from './libp2p-real';
 import { WebRTCTransport } from './webrtc-transport';
 
 export interface PeerInfo {
@@ -96,16 +96,17 @@ export class PeerDiscovery {
 
     // Update known peers with connected peers
     for (const peerId of connectedPeers) {
-      if (!this.peers.has(peerId)) {
-        this.peers.set(peerId, {
-          id: peerId,
+      const peerIdStr = typeof peerId === 'string' ? peerId : (peerId as any).toString();
+      if (!this.peers.has(peerIdStr)) {
+        this.peers.set(peerIdStr, {
+          id: peerIdStr,
           multiaddrs: [],
           protocols: [],
           lastSeen: Date.now(),
           score: 1.0
         });
       } else {
-        const peer = this.peers.get(peerId)!;
+        const peer = this.peers.get(peerIdStr)!;
         peer.lastSeen = Date.now();
         peer.score = Math.min(peer.score + 0.1, 1.0);
       }
@@ -126,7 +127,7 @@ export class PeerDiscovery {
 
     try {
       // Query DHT for random peers
-      const dht = this.p2pNode.getDHT();
+      const dht = (this.p2pNode as any).getDHT ? await (this.p2pNode as any).getDHT('bootstrap') : null;
       if (dht) {
         // Find random peers via DHT
         // This is a placeholder - actual implementation would query DHT

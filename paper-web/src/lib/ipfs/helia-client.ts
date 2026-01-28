@@ -283,8 +283,12 @@ export class HeliaClient {
 
     try {
       const cid = CID.parse(cidString);
-      for await (const pinnedCid of this.helia.pins.ls()) {
-        if (pinnedCid.equals(cid)) {
+      for await (const pin of this.helia.pins.ls()) {
+        // Handle Pin type which may or may not have equals method
+        const pinCid = (pin as any).cid || pin;
+        if ((pinCid as any).equals) {
+          if ((pinCid as any).equals(cid)) return true;
+        } else if (pinCid.toString() === cid.toString()) {
           return true;
         }
       }
@@ -392,7 +396,7 @@ export class HeliaClient {
   /**
    * Get libp2p instance
    */
-  getLibp2p(): Libp2p | null {
+  getLibp2p(): any {
     return this.helia?.libp2p || null;
   }
 

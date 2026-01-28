@@ -3,7 +3,7 @@
  * Implements bootstrap peer discovery and network joining via DHT
  */
 
-import { P2PNode } from '../p2p/libp2p-node';
+import { P2PNode } from '../p2p/libp2p-real';
 import { ConnectionManager } from '../p2p/connection-manager';
 
 export interface BootstrapPeer {

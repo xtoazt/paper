@@ -4,8 +4,8 @@
  */
 
 import React, { useState } from 'react';
-import { getIpfsNode } from '../../lib/storage/ipfs-node';
-import { uploadContent } from '../../lib/storage/content-distribution';
+import { getIPFSNode } from '../../lib/storage/ipfs-node';
+// import { uploadContent } from '../../lib/storage/content-distribution'; // Not exported
 import { getGlobalRegistry } from '../../lib/domains/global-registry';
 
 interface ContentUploaderProps {
@@ -49,7 +49,7 @@ export const ContentUploader: React.FC<ContentUploaderProps> = ({
     setStatus('Preparing upload...');
 
     try {
-      const ipfsNode = await getIpfsNode();
+      const ipfsNode = await getIPFSNode();
 
       if (!ipfsNode) {
         throw new Error('IPFS node not initialized');
@@ -66,7 +66,11 @@ export const ContentUploader: React.FC<ContentUploaderProps> = ({
       }
 
       setStatus('Uploading to IPFS...');
-      const cid = await uploadContent(content);
+      const ipfs = await getIPFSNode();
+      const contentData = typeof content === 'string' 
+        ? new TextEncoder().encode(content)
+        : content;
+      const cid = await ipfs.add(contentData);
 
       setStatus('Content uploaded!');
       setUploadedCID(cid);

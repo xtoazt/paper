@@ -4,7 +4,7 @@
  */
 
 import { GlobalRegistry, type GlobalDomainRecord } from './global-registry';
-import { P2PNode } from '../p2p/libp2p-node';
+import { P2PNode } from '../p2p/libp2p-real';
 import { WebRTCTransport } from '../p2p/webrtc-transport';
 
 export interface ServerConfig {
@@ -288,7 +288,7 @@ export class ServerHosting {
         domain,
         protocol: config.protocol,
         port: config.port,
-        peerId: this.p2pNode.getPeerId(),
+        peerId: await (this.p2pNode as any).getPeerId(),
         timestamp: Date.now()
       };
 

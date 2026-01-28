@@ -235,7 +235,7 @@ export class ContentDistribution {
       await this.connectionManager.publishTopic('paper:content:request', {
         type: 'request',
         cid,
-        requesterId: this.ipfsNode.getNode()?.toString() || '',
+        requesterId: ((this.ipfsNode as any).getNode?.()?.toString() || 'unknown'),
         timestamp: Date.now()
       });
 

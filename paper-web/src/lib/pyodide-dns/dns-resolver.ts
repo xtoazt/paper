@@ -94,7 +94,7 @@ result
       `, {
         globals: {
           dns_server: this.dnsServer
-        }
+        } as any
       });
 
       if (result && result.toJs) {
@@ -133,7 +133,7 @@ success
       `, {
         globals: {
           dns_server: this.dnsServer
-        }
+        } as any
       });
 
       console.log('Domain registration result:', result);
@@ -159,7 +159,7 @@ stats
       `, {
         globals: {
           dns_server: this.dnsServer
-        }
+        } as any
       });
 
       if (result && result.toJs) {
@@ -187,7 +187,7 @@ clear_cache(dns_server)
       `, {
         globals: {
           dns_server: this.dnsServer
-        }
+        } as any
       });
 
       console.log('DNS cache cleared');

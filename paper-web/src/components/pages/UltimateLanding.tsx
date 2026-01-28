@@ -124,55 +124,10 @@ export const UltimateLanding: React.FC = () => {
       {/* Interactive Demo with Terminal */}
       <InteractiveDemo />
 
-          {/* Terminal Demo */}
-          <div className="hero-terminal">
-            <div className="terminal-window-hero">
-              <div className="terminal-header-hero">
-                <div className="terminal-dots">
-                  <span className="dot dot-red"></span>
-                  <span className="dot dot-yellow"></span>
-                  <span className="dot dot-green"></span>
-                </div>
-                <div className="terminal-title-hero">Deploy to .paper in 10 seconds</div>
-                <div className="terminal-actions">
-                  <button className="terminal-btn">Copy</button>
-                </div>
-              </div>
-              <div className="terminal-body-hero">
-                <pre className="terminal-code-hero">{`$ paper deploy myapp
-
-⠋ Initializing deployment...
-✓ Project analyzed (2.1s)
-✓ Building optimized bundle (3.4s)
-✓ Uploading to IPFS
-  → CID: QmXa7P2k9VR3... (4.8MB)
-✓ Generating .paper domain
-  → Domain: myapp.paper
-  → Owner: ed25519_abc123...
-✓ Publishing to DHT (1,543 nodes)
-✓ Broadcasting via PubSub
-✓ Consensus achieved (97.8% agreement)
-
-🎉 Deployed successfully!
-
-   https://myapp.paper
-
-   Performance: ⚡ 47ms global resolution
-   Bandwidth:   ∞ Unlimited  
-   Storage:     ∞ Unlimited
-   Cost:        💰 $0.00
-
-`}</pre>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Technical Superiority Section */}
       <section
         className={`superiority-section ${isVisible.features ? 'visible' : ''}`}
-        ref={el => sectionsRef.current.features = el}
+        ref={(el) => { sectionsRef.current['features'] = el; }}
         data-section="features"
         id="features"
       >
@@ -320,7 +275,7 @@ export const UltimateLanding: React.FC = () => {
       {/* Comparison Matrix Section */}
       <section
         className={`comparison-section ${isVisible.comparison ? 'visible' : ''}`}
-        ref={el => sectionsRef.current.comparison = el}
+        ref={(el) => { sectionsRef.current['comparison'] = el; }}
         data-section="comparison"
         id="comparison"
       >
@@ -342,7 +297,7 @@ export const UltimateLanding: React.FC = () => {
       {/* Network Visualization Section */}
       <section
         className={`network-section ${isVisible.network ? 'visible' : ''}`}
-        ref={el => sectionsRef.current.network = el}
+        ref={(el) => { sectionsRef.current['network'] = el; }}
         data-section="network"
         id="network"
       >
@@ -395,7 +350,7 @@ export const UltimateLanding: React.FC = () => {
       {/* Interactive Demo Section */}
       <section
         className={`demo-section ${isVisible.demo ? 'visible' : ''}`}
-        ref={el => sectionsRef.current.demo = el}
+        ref={(el) => { sectionsRef.current['demo'] = el; }}
         data-section="demo"
         id="demo"
       >

@@ -8,8 +8,8 @@ export * from '../build';
 export { browserBuilder, p2pBuilder, buildOrchestrator } from '../build';
 
 // Runtime System
-export * from '../runtime';
-export { edgeRuntime, containerRuntime, runtimeRouter } from '../runtime';
+// export * from '../runtime/'; // Causes ambiguity with DeploymentStatus
+export { edgeRuntime, containerRuntime, runtimeRouter } from '../runtime/';
 
 // Deployment System
 export * from '../deployment';

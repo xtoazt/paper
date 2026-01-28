@@ -3,7 +3,7 @@
  * Manages P2P connections and handles connection lifecycle
  */
 
-import { P2PNode } from './libp2p-node';
+import { P2PNode } from './libp2p-real';
 import { WebRTCTransport } from './webrtc-transport';
 import { PeerDiscovery } from './peer-discovery';
 
@@ -187,16 +187,19 @@ export class ConnectionManager {
    */
   getConnectedPeers(): string[] {
     const webrtcPeers = this.webrtcTransport.getConnectedPeers();
-    const libp2pPeers = this.p2pNode.getPeers();
+    const libp2pPeers = this.p2pNode.getPeers().map((p: any) => 
+      typeof p === 'string' ? p : p.toString()
+    );
     return [...new Set([...webrtcPeers, ...libp2pPeers])];
   }
 
   /**
    * Check if connected to peer
    */
-  isConnectedToPeer(peerId: string): boolean {
-    return this.webrtcTransport.isConnected(peerId) ||
-           this.p2pNode.getPeers().includes(peerId);
+  isConnectedToPeer(peerId: string | any): boolean {
+    const peerIdStr = typeof peerId === 'string' ? peerId : peerId.toString();
+    return this.webrtcTransport.isConnected(peerIdStr) ||
+           this.p2pNode.getPeers().map((p: any) => typeof p === 'string' ? p : p.toString()).includes(peerIdStr);
   }
 
   /**

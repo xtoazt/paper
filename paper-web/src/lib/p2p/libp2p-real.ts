@@ -134,8 +134,9 @@ export class LibP2PNode {
     });
 
     // PubSub messages
-    if (this.node.services.pubsub) {
-      this.node.services.pubsub.addEventListener('message', (evt: any) => {
+    const pubsub = this.node.services['pubsub'] as any;
+    if (pubsub && typeof pubsub.addEventListener === 'function') {
+      pubsub.addEventListener('message', (evt: any) => {
         const topic = evt.detail.topic;
         const handler = this.messageHandlers.get(topic);
         
@@ -156,14 +157,15 @@ export class LibP2PNode {
    * Publish message to topic
    */
   async publish(topic: string, data: any): Promise<void> {
-    if (!this.node?.services.pubsub) {
+    const pubsub = this.node?.services['pubsub'] as any;
+    if (!pubsub || typeof pubsub.publish !== 'function') {
       throw new Error('PubSub not enabled');
     }
 
     try {
       const message = JSON.stringify(data);
       const encoded = new TextEncoder().encode(message);
-      await this.node.services.pubsub.publish(topic, encoded);
+      await pubsub.publish(topic, encoded);
       console.log('[libp2p] Published to topic:', topic);
     } catch (error) {
       console.error('[libp2p] Failed to publish:', error);
@@ -175,13 +177,14 @@ export class LibP2PNode {
    * Subscribe to topic
    */
   async subscribe(topic: string, handler: (msg: any) => void): Promise<void> {
-    if (!this.node?.services.pubsub) {
+    const pubsub = this.node?.services['pubsub'] as any;
+    if (!pubsub || typeof pubsub.subscribe !== 'function') {
       throw new Error('PubSub not enabled');
     }
 
     try {
       this.messageHandlers.set(topic, handler);
-      this.node.services.pubsub.subscribe(topic);
+      pubsub.subscribe(topic);
       console.log('[libp2p] Subscribed to topic:', topic);
     } catch (error) {
       console.error('[libp2p] Failed to subscribe:', error);
@@ -193,14 +196,55 @@ export class LibP2PNode {
    * Unsubscribe from topic
    */
   async unsubscribe(topic: string): Promise<void> {
-    if (!this.node?.services.pubsub) return;
+    const pubsub = this.node?.services['pubsub'] as any;
+    if (!pubsub || typeof pubsub.unsubscribe !== 'function') return;
 
     try {
       this.messageHandlers.delete(topic);
-      this.node.services.pubsub.unsubscribe(topic);
+      pubsub.unsubscribe(topic);
       console.log('[libp2p] Unsubscribed from topic:', topic);
     } catch (error) {
       console.error('[libp2p] Failed to unsubscribe:', error);
+    }
+  }
+
+  /**
+   * Get DHT value
+   */
+  async getDHT(key: string): Promise<Uint8Array | null> {
+    const dht = this.node?.services['dht'] as any;
+    if (!dht || typeof dht.get !== 'function') {
+      console.warn('[libp2p] DHT not available');
+      return null;
+    }
+
+    try {
+      const keyBytes = new TextEncoder().encode(key);
+      const result = await dht.get(keyBytes);
+      return result;
+    } catch (error) {
+      console.error('[libp2p] Failed to get from DHT:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Put DHT value
+   */
+  async putDHT(key: string, value: Uint8Array): Promise<void> {
+    const dht = this.node?.services['dht'] as any;
+    if (!dht || typeof dht.put !== 'function') {
+      console.warn('[libp2p] DHT not available');
+      return;
+    }
+
+    try {
+      const keyBytes = new TextEncoder().encode(key);
+      await dht.put(keyBytes, value);
+      console.log('[libp2p] Put to DHT:', key);
+    } catch (error) {
+      console.error('[libp2p] Failed to put to DHT:', error);
+      throw error;
     }
   }
 
@@ -250,7 +294,7 @@ export class LibP2PNode {
     return {
       peerId: this.node.peerId.toString(),
       addresses: this.node.getMultiaddrs().map(ma => ma.toString()),
-      protocols: Array.from(this.node.services).map(([key]) => key),
+      protocols: Object.keys(this.node.services),
       peerCount: this.getPeerCount()
     };
   }
@@ -293,3 +337,6 @@ export async function initLibP2PNode(config?: LibP2PConfig): Promise<LibP2PNode>
   }
   return node;
 }
+
+// Backward compatibility alias
+export { LibP2PNode as P2PNode, LibP2PNode as Libp2pNode };

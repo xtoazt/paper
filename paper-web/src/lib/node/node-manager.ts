@@ -106,8 +106,10 @@ export class NodeManager {
         console.log('Initializing domains infrastructure...');
         this.components.domains = await initDomainsInfrastructure(
           this.components.p2p.p2pNode,
-          this.components.tunneling?.encryption,
-          this.components.dns.resolver
+          this.components.tunneling?.encryption as any,
+          this.components.dns.resolver,
+          this.components.p2p.connectionManager,
+          this.components.p2p.webrtcTransport
         );
       }
 

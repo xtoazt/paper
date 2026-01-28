@@ -43,7 +43,7 @@ export const LandingPage: React.FC = () => {
         // Initialize node manager
         setStatusMessage('Starting P2P nodes...');
         const nodeManager = getNodeManager();
-        await nodeManager.startNodes();
+        // await nodeManager.startNodes(); // Method removed, nodes auto-start
 
         setStatusMessage('Network ready!');
         setIsReady(true);

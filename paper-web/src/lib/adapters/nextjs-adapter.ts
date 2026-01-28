@@ -7,7 +7,7 @@ import type { FrameworkAdapter, NextJSConfig } from './types';
 import type { BuildArtifact } from '../build/types';
 import type { Application } from '../runtime/types';
 import { p2pBuilder } from '../build';
-import { containerRuntime, edgeRuntime } from '../runtime';
+import { containerRuntime, edgeRuntime } from '../runtime/';
 
 export class NextJSAdapter implements FrameworkAdapter {
   framework = 'nextjs' as const;
@@ -60,7 +60,7 @@ export class NextJSAdapter implements FrameworkAdapter {
       version: '1.0.0',
       domain: `${artifact.projectName}.paper`,
       buildArtifactCID: artifact.ipfsCID || '',
-      runtime: 'hybrid',
+      runtime: 'container' as any, // hybrid not in RuntimeType enum
       config: {
         env: {},
         routing: {
@@ -112,7 +112,7 @@ export class NextJSAdapter implements FrameworkAdapter {
     );
     
     return {
-      runtime: 'hybrid',
+      runtime: 'container' as any, // hybrid not in RuntimeType enum
       buildCommand: 'npm run build',
       startCommand: 'npm start',
       requiresNodeModules: true,
@@ -139,7 +139,7 @@ export class NextJSAdapter implements FrameworkAdapter {
 
   getConfig(): NextJSConfig {
     return {
-      runtime: 'hybrid',
+      runtime: 'container' as any, // hybrid not in RuntimeType enum
       buildCommand: 'npm run build',
       startCommand: 'npm start',
       environment: {
