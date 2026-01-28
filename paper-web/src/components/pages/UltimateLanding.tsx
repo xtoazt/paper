@@ -8,6 +8,7 @@ import { getBootstrapManager } from '../../lib/bootstrap';
 import LiveDemo from '../interactive/LiveDemo';
 import NetworkViz from '../interactive/NetworkViz';
 import ComparisonMatrix from '../interactive/ComparisonMatrix';
+import { HeroSection, InteractiveDemo } from '../landing';
 
 export const UltimateLanding: React.FC = () => {
   const [stats, setStats] = useState({
@@ -117,76 +118,11 @@ export const UltimateLanding: React.FC = () => {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="hero-ultimate">
-        <div className="hero-background">
-          <div className="gradient-mesh"></div>
-          <div className="gradient-orb orb-purple"></div>
-          <div className="gradient-orb orb-blue"></div>
-          <div className="gradient-orb orb-pink"></div>
-          <div className="grid-pattern"></div>
-        </div>
+      {/* New Apple-Style Hero Section */}
+      <HeroSection />
 
-        <div className="container">
-          <div className="hero-content-ultimate">
-            <div className="hero-badge">
-              <span className="badge-dot"></span>
-              <span>10000x More Powerful Than Vercel</span>
-            </div>
-
-            <h1 className="hero-title-ultimate">
-              Deploy Anywhere.
-              <br />
-              <span className="gradient-text-ultimate">Own Forever.</span>
-              <br />
-              Pay Nothing.
-            </h1>
-
-            <p className="hero-subtitle-ultimate">
-              Paper Network is the only platform offering <strong>true global domains</strong>,
-              <strong> unlimited server hosting</strong>, and <strong>censorship-resistant</strong> deployment—
-              all for <strong>$0 forever</strong>.
-            </p>
-
-            <div className="hero-cta-group">
-              <button className="btn btn-primary btn-hero" onClick={handleGetStarted}>
-                Start Building Free
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
-              </button>
-              <a
-                href="https://cdn.jsdelivr.net/gh/xtoazt/paper@main/bootstrap.pdf"
-                className="btn btn-secondary btn-hero"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-                </svg>
-                Download Bootstrap PDF
-              </a>
-            </div>
-
-            <div className="hero-stats-grid">
-              <div className="stat-card-hero">
-                <div className="stat-number">{stats.domains.toLocaleString()}+</div>
-                <div className="stat-label">Domains Deployed</div>
-              </div>
-              <div className="stat-card-hero">
-                <div className="stat-number">{stats.nodes.toLocaleString()}+</div>
-                <div className="stat-label">Network Nodes</div>
-              </div>
-              <div className="stat-card-hero">
-                <div className="stat-number">{stats.uptime}%</div>
-                <div className="stat-label">Uptime SLA</div>
-              </div>
-              <div className="stat-card-hero">
-                <div className="stat-number">{stats.speed}ms</div>
-                <div className="stat-label">Avg Resolution</div>
-              </div>
-            </div>
-          </div>
+      {/* Interactive Demo with Terminal */}
+      <InteractiveDemo />
 
           {/* Terminal Demo */}
           <div className="hero-terminal">

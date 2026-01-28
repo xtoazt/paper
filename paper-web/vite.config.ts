@@ -17,32 +17,82 @@ export default defineConfig({
     // Code splitting for optimal loading
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Vendor chunks
-          'react-vendor': ['react', 'react-dom'],
-          // P2P libraries
-          'p2p-vendor': ['libp2p', 'ipfs-core'],
+        manualChunks(id) {
+          // React core
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'react-vendor';
+          }
+          // P2P libraries - split into separate chunks
+          if (id.includes('node_modules/libp2p') || id.includes('node_modules/@libp2p')) {
+            return 'libp2p-vendor';
+          }
+          if (id.includes('node_modules/ipfs') || id.includes('node_modules/helia')) {
+            return 'ipfs-vendor';
+          }
+          // Design system
+          if (id.includes('/components/design-system/')) {
+            return 'design-system';
+          }
           // Interactive components (lazy loaded)
-          'interactive': [
-            './src/components/interactive/LiveDemo',
-            './src/components/interactive/NetworkViz',
-            './src/components/interactive/ComparisonMatrix'
-          ]
+          if (id.includes('/components/interactive/')) {
+            return 'interactive';
+          }
+          // Landing page components
+          if (id.includes('/components/landing/')) {
+            return 'landing';
+          }
+          // Dashboard components
+          if (id.includes('/components/ui/') && id.includes('Dashboard')) {
+            return 'dashboard';
+          }
+          // Monitoring components
+          if (id.includes('/components/monitoring/')) {
+            return 'monitoring';
+          }
+          // AI components
+          if (id.includes('/components/ai/') || id.includes('/lib/ai/')) {
+            return 'ai';
+          }
+          // Build system
+          if (id.includes('/lib/build/')) {
+            return 'build-system';
+          }
+          // Other node_modules
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
         }
       }
     },
-    // Optimize chunk size
-    chunkSizeWarningLimit: 1000,
-    // Enable minification
+    // Optimize chunk size - target < 100KB per chunk
+    chunkSizeWarningLimit: 100,
+    // Enable aggressive minification
     minify: 'terser',
     terserOptions: {
       compress: {
         drop_console: true, // Remove console.log in production
-        drop_debugger: true
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug'],
+        passes: 2 // Multiple passes for better compression
+      },
+      mangle: {
+        safari10: true // Safari 10 compatibility
+      },
+      format: {
+        comments: false // Remove all comments
       }
     },
+    // CSS optimization
+    cssCodeSplit: true,
+    cssMinify: true,
     // Source maps for debugging (disable in production)
-    sourcemap: false
+    sourcemap: false,
+    // Target modern browsers for smaller bundles
+    target: 'es2020',
+    // Optimize assets
+    assetsInlineLimit: 4096, // Inline assets < 4KB
+    // Report compressed size
+    reportCompressedSize: true
   },
   // Performance optimizations
   server: {
