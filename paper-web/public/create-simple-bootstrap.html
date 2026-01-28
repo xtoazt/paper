@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paper Network Bootstrap</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    
+    .container {
+      max-width: 600px;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 3rem;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+    
+    h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      margin-bottom: 1rem;
+    }
+    
+    .subtitle {
+      font-size: 1.5rem;
+      opacity: 0.9;
+      margin-bottom: 2rem;
+    }
+    
+    .description {
+      font-size: 1.125rem;
+      line-height: 1.6;
+      margin-bottom: 2rem;
+      text-align: left;
+    }
+    
+    .features {
+      text-align: left;
+      margin-bottom: 2rem;
+    }
+    
+    .features li {
+      margin-bottom: 0.5rem;
+      padding-left: 1.5rem;
+      position: relative;
+    }
+    
+    .features li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      font-weight: bold;
+    }
+    
+    .cta-button {
+      display: inline-block;
+      padding: 1rem 2rem;
+      background: white;
+      color: #667eea;
+      text-decoration: none;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 1.125rem;
+      transition: all 0.3s;
+      margin: 0.5rem;
+    }
+    
+    .cta-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    }
+    
+    .secondary-button {
+      background: transparent;
+      color: white;
+      border: 2px solid white;
+    }
+    
+    .countdown {
+      font-size: 0.875rem;
+      opacity: 0.8;
+      margin-top: 1rem;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .loading {
+      animation: pulse 2s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Paper Network</h1>
+    <div class="subtitle">Bootstrap Page</div>
+    
+    <div class="description">
+      <p>Welcome to Paper Network - the decentralized web hosting platform that provides unlimited free hosting on .paper domains.</p>
+    </div>
+    
+    <ul class="features">
+      <li>True global domains (cryptographically secured)</li>
+      <li>Full HTTP/WebSocket server hosting</li>
+      <li>Unlimited bandwidth and storage</li>
+      <li>Censorship impossible (P2P + IPFS)</li>
+      <li>Deploy in under 10 seconds</li>
+      <li>$0 forever - no credit card required</li>
+    </ul>
+    
+    <a href="https://paper.is-a.software/" class="cta-button">
+      Start Building Free
+    </a>
+    
+    <a href="https://github.com/xtoazt/paper" class="cta-button secondary-button">
+      View on GitHub
+    </a>
+    
+    <div class="countdown loading" id="countdown">
+      Redirecting to Paper Network in <span id="seconds">5</span> seconds...
+    </div>
+  </div>
+  
+  <script>
+    // Auto-redirect to Paper Network after 5 seconds
+    let seconds = 5;
+    const countdownEl = document.getElementById('countdown');
+    const secondsEl = document.getElementById('seconds');
+    
+    const interval = setInterval(() => {
+      seconds--;
+      secondsEl.textContent = seconds;
+      
+      if (seconds <= 0) {
+        clearInterval(interval);
+        window.location.href = 'https://paper.is-a.software/';
+      }
+    }, 1000);
+    
+    // Log bootstrap event
+    console.log('Paper Network Bootstrap Page Loaded');
+    console.log('Redirecting to: https://paper.is-a.software/');
+  </script>
+</body>
+</html>

@@ -164,7 +164,7 @@ export const UltimateLanding: React.FC = () => {
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
                 </svg>
-                Download Bootstrap
+                Download Bootstrap PDF
               </a>
             </div>
 
@@ -575,9 +575,9 @@ export const UltimateLanding: React.FC = () => {
 
               <div className="footer-column-ultimate">
                 <h4>Resources</h4>
-                <a href="https://github.com/xtoazt/paper" target="_blank" rel="noopener noreferrer">GitHub</a>
+                <a href="https://github.com/xtoazt/paper" target="_blank" rel="noopener noreferrer">GitHub Repository</a>
                 <a href="https://cdn.jsdelivr.net/gh/xtoazt/paper@main/bootstrap.pdf" target="_blank" rel="noopener noreferrer">Bootstrap PDF</a>
-                <a href="/docs">Documentation</a>
+                <a href="/docs">Getting Started</a>
                 <a href="/docs/global-domains">Domain Guide</a>
               </div>
 
