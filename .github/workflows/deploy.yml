@@ -34,10 +34,56 @@ jobs:
       - name: Build
         run: cd paper-web && npm run build
         
+      - name: Verify build output
+        run: |
+          cd paper-web
+          echo "=== Build output structure ==="
+          echo "Public directory:"
+          ls -la public/ || echo "public/ directory not found"
+          echo ""
+          echo "Public/build directory:"
+          ls -la public/build/ || echo "public/build/ directory not found"
+          echo ""
+          echo "Build directory:"
+          ls -la build/ || echo "build/ directory not found"
+          echo ""
+          echo "=== Checking for required files ==="
+          [ -d "public" ] && echo "✓ public/ exists" || echo "✗ public/ missing"
+          [ -d "public/build" ] && echo "✓ public/build/ exists" || echo "✗ public/build/ missing"
+        
+      - name: Prepare static files for GitHub Pages
+        run: |
+          cd paper-web
+          # Create dist directory for GitHub Pages
+          mkdir -p dist
+          
+          # Copy entire public directory (this includes build assets)
+          if [ -d "public" ]; then
+            echo "Copying public/ to dist/..."
+            cp -r public/* dist/
+            echo "✓ Copied public files"
+          else
+            echo "Error: public/ directory not found"
+            exit 1
+          fi
+          
+          # Verify dist has content
+          if [ ! "$(ls -A dist)" ]; then
+            echo "Error: dist directory is empty after copy"
+            exit 1
+          fi
+          
+          echo "=== Final dist contents ==="
+          ls -la dist/ | head -20
+          echo ""
+          echo "✓ Build artifacts prepared successfully"
+        
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./paper-web/dist
+          name: github-pages
+          retention-days: 1
 
   deploy:
     environment:
