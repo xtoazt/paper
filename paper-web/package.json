@@ -5,14 +5,17 @@
   "type": "module",
   "description": "Revolutionary decentralized PaaS platform with infinite compute",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
+    "dev": "remix vite:dev",
+    "build": "remix vite:build",
+    "start": "remix-serve ./build/server/index.js",
+    "typecheck": "tsc",
     "test": "node -e \"import('./src/lib/testing/test-suites.test.ts').then(m => m.runAllTests())\"",
-    "type-check": "tsc --noEmit",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
+    "@remix-run/node": "^2.8.1",
+    "@remix-run/react": "^2.8.1",
+    "@remix-run/serve": "^2.8.1",
     "@chainsafe/libp2p-gossipsub": "^13.0.0",
     "@chainsafe/libp2p-noise": "^15.0.0",
     "@helia/json": "^3.0.0",
@@ -25,6 +28,7 @@
     "@libp2p/pubsub": "^9.0.0",
     "@libp2p/webrtc": "^4.0.0",
     "helia": "^4.0.0",
+    "isbot": "^4.1.0",
     "libp2p": "^1.0.0",
     "libsodium-wrappers": "^0.8.2",
     "lucide-react": "^0.563.0",
@@ -35,6 +39,8 @@
     "uint8arrays": "^5.0.0"
   },
   "devDependencies": {
+    "@remix-run/dev": "^2.8.1",
+    "@remix-run/eslint-config": "^2.8.1",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
     "@typescript-eslint/eslint-plugin": "^6.14.0",

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { getBootstrapManager } from '../../lib/bootstrap';
+// import { getBootstrapManager } from '../../lib/bootstrap'; // Removed to prevent blocking
 import LiveDemo from '../interactive/LiveDemo';
 import NetworkViz from '../interactive/NetworkViz';
 import ComparisonMatrix from '../interactive/ComparisonMatrix';

@@ -34,9 +34,12 @@
     /* Advanced Options */
     "forceConsistentCasingInFileNames": true,
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "paths": {
+      "~/*": ["./src/*"]
+    }
   },
-  "include": ["src"],
+  "include": ["src", "app"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
 
